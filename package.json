@@ -1,6 +1,6 @@
 {
   "name": "root",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "private": true,
   "scripts": {
     "build": "lerna run --scope 'cdktf*' --scope @cdktf/* build",
@@ -17,6 +17,7 @@
     "test:update": "npx lerna exec --parallel --no-bail --scope 'cdktf*' --scope '@cdktf/*' npx 'jest -u'",
     "watch": "lerna run --parallel  --stream --scope @cdktf/* --scope 'cdktf*' watch-preserve-output",
     "lint:workspace": "eslint .",
+    "lint:examples": "node tools/lint-examples.js",
     "link-packages": "lerna exec --scope 'cdktf*' --scope @cdktf/* yarn link",
     "integration": "cd test && yarn edge:install && ./run-against-dist npx jest --runInBand",
     "integration:update": "cd test && yarn && yarn edge:install && NODE_OPTIONS='--max-old-space-size=7168' ./run-against-dist npx jest -u --runInBand",
@@ -40,7 +41,9 @@
     "prepare-next-release": "standard-version --prerelease pre --release-as minor --skip.changelog=true --skip.commit=true",
     "prepare-release": "tools/prepare-release.sh",
     "release": "standard-version",
-    "generate-docs": "cd tools/documentation-generation && yarn && yarn docs && npx prettier --write ../../website/docs/cdktf/api-reference/*.mdx"
+    "generate-docs:api": "yarn && yarn build && yarn package && cd tools/documentation-generation && git clean -dfx . && yarn && yarn docs && npx prettier --write ../../website/docs/cdktf/api-reference/*.mdx",
+    "generate-docs:translations": "cd tools/documentation-code-snippets && yarn && yarn update-snippets && cd ../../ && yarn run format",
+    "generate-docs": "yarn generate-docs:translations && yarn generate-docs:api"
   },
   "workspaces": {
     "packages": [
@@ -62,7 +65,10 @@
       "**/archiver/**",
       "json-stable-stringify",
       "**/json-stable-stringify",
-      "**/json-stable-stringify/**"
+      "**/json-stable-stringify/**",
+      "semver",
+      "**/semver",
+      "**/semver/**"
     ]
   },
   "devDependencies": {
@@ -80,8 +86,14 @@
     "standard-version": "^9.5.0"
   },
   "lint-staged": {
-    "packages/cdktf": "yarn docs",
-    "**/*.{ts,tsx,js,css,md}": "prettier --write"
+    "packages/cdktf/**/*.ts": "yarn generate-docs:api",
+    "examples/*/documentation/**/*.{ts,cs,go,java,py}": "yarn generate-docs:translations",
+    "**/*.{tsx,js,css,md}": "prettier --write",
+    "**/*.ts": [
+      "prettier --write",
+      "./tools/add-copyright-header-to-file.sh"
+    ],
+    "examples/**": "yarn lint:examples"
   },
   "eslintConfig": {
     "parser": "@typescript-eslint/parser",

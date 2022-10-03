@@ -1,3 +1,5 @@
+// Copyright (c) HashiCorp, Inc
+// SPDX-License-Identifier: MPL-2.0
 import { Construct } from "constructs";
 import { TerraformElement } from "./terraform-element";
 import { deepMerge } from "./util";
@@ -23,6 +25,7 @@ export interface TerraformOutputConfig {
   readonly staticId?: boolean;
 }
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 export class TerraformOutput extends TerraformElement {
   public value: Expression | ITerraformAddressable;
   public description?: string;

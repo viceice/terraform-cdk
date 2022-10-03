@@ -1,3 +1,5 @@
+// Copyright (c) HashiCorp, Inc
+// SPDX-License-Identifier: MPL-2.0
 import { Construct } from "constructs";
 import { TerraformElement } from "./terraform-element";
 import { TerraformProvider } from "./terraform-provider";
@@ -25,6 +27,7 @@ export interface TerraformModuleProvider {
   readonly moduleAlias: string;
 }
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 export abstract class TerraformModule
   extends TerraformElement
   implements ITerraformDependable

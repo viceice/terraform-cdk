@@ -1,3 +1,5 @@
+// Copyright (c) HashiCorp, Inc
+// SPDX-License-Identifier: MPL-2.0
 import { Construct } from "constructs";
 import { TerraformBackend } from "../terraform-backend";
 import { keysToSnakeCase } from "../util";
@@ -6,6 +8,7 @@ import {
   DataTerraformRemoteStateConfig,
 } from "../terraform-remote-state";
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 export class HttpBackend extends TerraformBackend {
   constructor(scope: Construct, private readonly props: HttpBackendProps) {
     super(scope, "backend", "http");
@@ -24,6 +27,7 @@ export class HttpBackend extends TerraformBackend {
   }
 }
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 export class DataTerraformRemoteStateHttp extends TerraformRemoteState {
   constructor(
     scope: Construct,

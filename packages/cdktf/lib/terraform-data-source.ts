@@ -1,3 +1,5 @@
+// Copyright (c) HashiCorp, Inc
+// SPDX-License-Identifier: MPL-2.0
 import { Construct } from "constructs";
 import { Token } from "./tokens";
 import { TerraformElement } from "./terraform-element";
@@ -15,6 +17,7 @@ import { IInterpolatingParent } from "./terraform-addressable";
 import { ITerraformIterator } from "./terraform-iterator";
 import assert = require("assert");
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 export class TerraformDataSource
   extends TerraformElement
   implements ITerraformResource, ITerraformDependable, IInterpolatingParent

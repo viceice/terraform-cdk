@@ -1,7 +1,8 @@
+// Copyright (c) HashiCorp, Inc
+// SPDX-License-Identifier: MPL-2.0
 import { Testing } from "../../..";
 import { TestResource } from "../../../../test/helper";
 import { TestDataSource } from "../../../../test/helper/data-source";
-import { Resource } from "../../../resource";
 import { Construct } from "constructs";
 
 describe("#synthScope", () => {
@@ -37,7 +38,7 @@ describe("#synthScope", () => {
   });
 
   test("using resource", () => {
-    class MyResource extends Resource {
+    class MyResource extends Construct {
       public resource: TestResource;
 
       constructor(scope: Construct, id: string) {

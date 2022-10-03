@@ -4,7 +4,12 @@ import java.util.*;
 import software.constructs.Construct;
 
 import com.hashicorp.cdktf.*;
-import imports.edgeprovider.*;
+import imports.edgeprovider.provider.*;
+import imports.edgeprovider.optional_attribute_resource.*;
+import imports.edgeprovider.list_block_resource.*;
+import imports.edgeprovider.set_block_resource.*;
+import imports.edgeprovider.map_resource.*;
+import imports.edgeprovider.required_attribute_resource.*;
 
 // Using references to resource attributes as resource arguments
 class ReferenceStack extends TerraformStack {
@@ -79,7 +84,7 @@ class ReferenceStack extends TerraformStack {
 
         // passing a literal array with references for a list
         // This doesn't work since the types of 'req' and 'singlereq' are different.
-        // It works in TS/Python since the type definitions have the same properties.
+        // It works in TS since the type definitions have the same properties.
         // ListBlockResource.Builder.create(this, "list_literal")
         // .req(Token.asAny(Collections.singletonList(list.getSinglereq())))
         // .singlereq(list.getSinglereq())

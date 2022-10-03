@@ -11,21 +11,23 @@ We generate all files necessary to start testing when you run `cdktf init` so th
 
 ## Add Testing to Your Application
 
-    If you would like to add testing to an existing project, refer the following resources according to your chosen language:
-    - **TypeScript:** Follow TypeScript's [Getting Started guide](https://jestjs.io/docs/getting-started) for testing with Jest. Then, add these lines in a [setup file](https://jestjs.io/docs/configuration#setupfiles-array):
+If you would like to add testing to an existing project, refer the following resources according to your chosen language:
 
-        ```js
-        const cdktf = require("cdktf");
-        cdktf.Testing.setupJest();
-        ```
-    - **Python:** Follow the [Get Started guide](https://docs.pytest.org/en/7.1.x/getting-started.html) for pytest. The assertions for CDKTF are available in the `cdktf` package under `Testing`.
-    - **Java:** Follow the [Using JUnit documentation](https://maven.apache.org/plugins-archives/maven-surefire-plugin-2.12.4/examples/junit.html). The assertions for CDKTF specific are available in the `cdktf` package under `Testing`.
-    - **C#:** Follow the [Getting Started with xUnit.net guide](https://xunit.net/docs/getting-started/netcore/cmdline). The assertions for CDKTF are available in the `cdktf` package under `Testing`.
-    - **Go:** Follow the [Add a Test guide](https://go.dev/doc/tutorial/add-a-test) in the Go documentation. The assertions for CDKTF specific are available in the `cdktf` package under `Testing`.
+- **TypeScript:** Follow TypeScript's [Getting Started guide](https://jestjs.io/docs/getting-started) for testing with Jest. Then, add these lines in a [setup file](https://jestjs.io/docs/configuration#setupfiles-array):
+
+  ```js
+  const cdktf = require("cdktf");
+  cdktf.Testing.setupJest();
+  ```
+
+- **Python:** Follow the [Get Started guide](https://docs.pytest.org/en/7.1.x/getting-started.html) for pytest. The assertions for CDKTF are available in the `cdktf` package under `Testing`.
+- **Java:** Follow the [Using JUnit documentation](https://maven.apache.org/plugins-archives/maven-surefire-plugin-2.12.4/examples/junit.html). The assertions for CDKTF specific are available in the `cdktf` package under `Testing`.
+- **C#:** Follow the [Getting Started with xUnit.net guide](https://xunit.net/docs/getting-started/netcore/cmdline). The assertions for CDKTF are available in the `cdktf` package under `Testing`.
+- **Go:** Follow the [Add a Test guide](https://go.dev/doc/tutorial/add-a-test) in the Go documentation. The assertions for CDKTF specific are available in the `cdktf` package under `Testing`.
 
 ### Write Assertions
 
-The Typescript example below uses `Testing.synthScope` to test a part of the application. This creates a scope to test a subset of the application and returns a JSON string representing the synthesized HCL-JSON. Then it uses custom matchers to verify the code acts as intended.
+The following Typescript example uses `Testing.synthScope` to test a part of the application. This creates a scope to test a subset of the application and returns a JSON string representing the synthesized HCL-JSON. Then it uses custom matchers to verify the code acts as intended.
 
 The other examples use `Testing.synth` to test a part of the application. Given the desired scope to test, a JSON string representing the synthesized HCL-JSON is returned. Then the custom assertions under `Testing` in the cdktf package can be used to verify the code acts as intended.
 
@@ -40,7 +42,8 @@ Examples in
 
 ```ts
 import { Testing } from "cdktf";
-import { Image, Container } from "../.gen/providers/docker";
+import { Image } from "../.gen/providers/docker/image";
+import { Container } from "../.gen/providers/docker/container";
 import MyApplicationsAbstraction from "../app"; // Could be a class extending from Construct
 
 describe("Unit testing using assertions", () => {
@@ -65,7 +68,8 @@ describe("Unit testing using assertions", () => {
 ```python
 import pytest
 from cdktf import Testing
-from imports.docker import Image, Container
+from imports.docker.image import Image
+from imports.docker.container import Container
 from app import MyApplicationsAbstraction # Could be a class extending from Construct
 
 class TestApplication:
@@ -119,7 +123,8 @@ using HashiCorp.Cdktf; // MyApplicationsAbstraction - Could be a class extending
 using MyCompany.MyApp;
 using System;
 using System.Collections.Generic;
-using docker;
+using docker.Image;
+using docker.Container;
 
 namespace MyCompany.MyApp{
   public class TestApplication{
@@ -148,7 +153,8 @@ package main
 
 import (
 	"testing"
-	"cdk.tf/go/stack/generated/kreuzwerker/docker"
+	"cdk.tf/go/stack/generated/kreuzwerker/docker/image"
+	"cdk.tf/go/stack/generated/kreuzwerker/docker/container"
 	"github.com/hashicorp/terraform-cdk-go/cdktf"
 	"github.com/aws/jsii-runtime-go"
 )
@@ -157,7 +163,7 @@ var stack = NewMyApplicationsAbstraction(cdktf.Assertions_App(nil), "stack")
 var synth = cdktf.Assertions_Synth(stack)
 
 func TestShouldContainContainer(t *testing.T){
-	assertion := cdktf.Assertions_ToHaveResource(synth, docker.Container_TfResourceType())
+	assertion := cdktf.Assertions_ToHaveResource(synth, container.Container_TfResourceType())
 
 	if !*assertion  {
 		t.Error(assertion.Message())
@@ -168,7 +174,7 @@ func TestShouldUseUbuntuImage(t *testing.T){
 	properties := map[string]interface{}{
 		"name": "ubuntu:latest",
 	}
-	assertion := cdktf.Assertions_ToHaveResourceWithProperties(synth, docker.Image_TfResourceType(), &properties)
+	assertion := cdktf.Assertions_ToHaveResourceWithProperties(synth, image.Image_TfResourceType(), &properties)
 
 	if !*assertion  {
 		t.Error(assertion.Message())
@@ -182,9 +188,10 @@ func TestShouldUseUbuntuImage(t *testing.T){
 
 Snapshot tests are useful when you want to make sure your infrastructure does not change unexpectedly. Snapshot Testing is only supported in Typescript with Jest. Refer to the [Jest docs](https://jestjs.io/docs/snapshot-testing) for details.
 
-```ts
+```typescript
 import { Testing } from "cdktf";
-import { Image, Container } from "../.gen/providers/docker";
+import { Image } from "../.gen/providers/docker/image";
+import { Container } from "../.gen/providers/docker/container";
 import MyApplicationsAbstraction from "../app"; // Could be a class extending from Construct
 
 describe("Unit testing using snapshots", () => {
@@ -201,7 +208,7 @@ describe("Unit testing using snapshots", () => {
 
 ### Integration with Terraform
 
-You can produce invalid Terraform configuration if you are using escape hatches in your CDK for Terraform application. You may use an escape hatch when setting up a [remote backend](/cdktf/concepts/remote-backends) or when [overriding resource attributes](/cdktf/concepts/providers-and-resources#escape-hatch)
+You can produce invalid Terraform configuration if you are using escape hatches in your CDK for Terraform application. You may use an escape hatch when setting up a [remote backend](/cdktf/concepts/remote-backends) or when [overriding resource attributes](/cdktf/concepts/resources#escape-hatch)
 
 To test this, you can assert that [`terraform validate`](/cli/commands/validate) or [`terraform plan`](/cli/commands/plan) run successfully on all or part of your application before running `cdktf plan` or `cdktf deploy`.
 
@@ -274,7 +281,6 @@ public class TestApplication {
 using Xunit;
 using HashiCorp.Cdktf; // MyApplicationsAbstraction - Could be a class extending from Construct
 using MyCompany.MyApp;
-using HashiCorp.Cdktf;
 using System;
 
 namespace MyCompany.MyApp{

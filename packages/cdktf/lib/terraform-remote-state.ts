@@ -1,3 +1,5 @@
+// Copyright (c) HashiCorp, Inc
+// SPDX-License-Identifier: MPL-2.0
 import { Construct } from "constructs";
 import { TerraformElement } from "./terraform-element";
 import { Token } from "./tokens";
@@ -11,6 +13,7 @@ export interface DataTerraformRemoteStateConfig {
   readonly defaults?: { [key: string]: any };
 }
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 export abstract class TerraformRemoteState
   extends TerraformElement
   implements ITerraformAddressable

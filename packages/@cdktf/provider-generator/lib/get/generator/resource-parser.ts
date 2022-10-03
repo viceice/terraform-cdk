@@ -1,3 +1,5 @@
+// Copyright (c) HashiCorp, Inc
+// SPDX-License-Identifier: MPL-2.0
 import { toCamelCase, toPascalCase, toSnakeCase } from "codemaker";
 import {
   Attribute,
@@ -19,7 +21,19 @@ import {
 import { detectAttributeLoops } from "./loop-detection";
 
 const isReservedClassName = (className: string): boolean => {
-  return ["string"].includes(className.toLowerCase());
+  return ["string", "object", "function"].includes(className.toLowerCase());
+};
+
+const getFileName = (provider: string, baseName: string): string => {
+  if (baseName === "index") {
+    return "index-resource/index.ts";
+  }
+
+  if (baseName === `${provider}_provider`) {
+    return "provider/index.ts";
+  }
+
+  return `${toSnakeCase(baseName).replace(/_/g, "-")}/index.ts`;
 };
 
 class Parser {
@@ -68,10 +82,8 @@ class Parser {
     const className = this.uniqueClassName(toPascalCase(baseName));
     // avoid naming collision - see https://github.com/hashicorp/terraform-cdk/issues/299
     const configStructName = this.uniqueClassName(`${className}Config`);
-    const fileName =
-      baseName === "index"
-        ? "index-resource.ts"
-        : `${toSnakeCase(baseName).replace(/_/g, "-")}.ts`;
+    const fileName = getFileName(provider, baseName);
+
     const filePath = `providers/${toSnakeCase(provider)}/${fileName}`;
     const attributes = this.renderAttributesForBlock(
       new Scope({

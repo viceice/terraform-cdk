@@ -1,3 +1,5 @@
+// Copyright (c) HashiCorp, Inc
+// SPDX-License-Identifier: MPL-2.0
 import { TerraformDynamicExpression } from "./terraform-dynamic-expression";
 import { ITerraformIterator } from "./terraform-iterator";
 import { IResolvable, IResolveContext, Lazy, Token } from "./tokens";
@@ -5,6 +7,7 @@ import { captureStackTrace } from "./tokens/private/stack-trace";
 
 const DYNAMIC_BLOCK_SYMBOL = Symbol.for("cdktf/TerraformDynamicBlock");
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 export class TerraformDynamicBlock implements IResolvable {
   public readonly creationStack: string[];
   public readonly forEach: ITerraformIterator;

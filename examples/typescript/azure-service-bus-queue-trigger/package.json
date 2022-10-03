@@ -1,13 +1,11 @@
 {
-  "name": "service-bus-queue-trigger",
+  "name": "@examples/typescript-azure-service-bus-queue-trigger",
   "version": "1.0.0",
   "main": "main.js",
   "types": "main.ts",
   "license": "MPL-2.0",
-  "private": true,
   "scripts": {
-    "get": "cdktf get",
-    "build": "tsc",
+    "build": "cdktf get",
     "synth": "cdktf synth",
     "compile": "tsc --pretty",
     "watch": "tsc -w",
@@ -21,12 +19,12 @@
   },
   "dependencies": {
     "@cdktf/provider-azurerm": "^0.8.15",
-    "cdktf": "^0.6.2",
+    "cdktf": "^0.0.0",
     "constructs": "^10.0.25"
   },
   "devDependencies": {
     "@types/jest": "^27.5.2",
-    "@types/node": "^16.11.45",
+    "@types/node": "^16.11.60",
     "jest": "^27.5.1",
     "ts-jest": "^27.1.5",
     "ts-node": "^10.9.1",

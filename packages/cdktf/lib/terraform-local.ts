@@ -1,3 +1,5 @@
+// Copyright (c) HashiCorp, Inc
+// SPDX-License-Identifier: MPL-2.0
 import { Construct } from "constructs";
 import { TerraformElement } from "./terraform-element";
 import { Token } from "./tokens";
@@ -5,6 +7,7 @@ import { ref } from "./tfExpression";
 import { IResolvable } from "./tokens/resolvable";
 import { ITerraformAddressable } from "./terraform-addressable";
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 export class TerraformLocal
   extends TerraformElement
   implements ITerraformAddressable

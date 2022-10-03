@@ -1,3 +1,5 @@
+// Copyright (c) HashiCorp, Inc
+// SPDX-License-Identifier: MPL-2.0
 // copied from https://github.com/aws/constructs/blob/e01e47f78ef1e9b600efcd23ff7705aa8d384017/lib/private/encoding.ts
 import { IFragmentConcatenator, IResolvable } from "../resolvable";
 import { TokenizedStringFragments } from "../string-fragments";
@@ -136,24 +138,36 @@ export class NullConcat implements IFragmentConcatenator {
   }
 }
 
+/**
+ * Returns true if argument contains a string list token
+ */
 export function containsStringListTokenElement(xs: any[]) {
   return xs.some(
     (x) => typeof x === "string" && TokenString.forListToken(x).test()
   );
 }
 
+/**
+ * Returns true if argument contains a number list token
+ */
 export function containsNumberListTokenElement(xs: any[]) {
   return xs.some(
     (x) => typeof x === "number" && extractTokenDouble(x, true) !== undefined
   );
 }
 
+/**
+ * Returns true if argument contains a string map token
+ */
 export function containsMapToken(xs: { [key: string]: any }) {
   return Object.keys(xs).some(
     (x) => typeof x === "string" && TokenString.forMapToken(x).test()
   );
 }
 
+/**
+ * Returns true if argument is a complex element
+ */
 export function isComplexElement(xs: any) {
   return (
     typeof xs === "object" &&
@@ -163,6 +177,9 @@ export function isComplexElement(xs: any) {
   );
 }
 
+/**
+ * Returns true if list contains a complex element
+ */
 export function containsComplexElement(xs: any) {
   return xs.length > 0 && isComplexElement(xs[0]);
 }

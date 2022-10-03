@@ -1,3 +1,5 @@
+// Copyright (c) HashiCorp, Inc
+// SPDX-License-Identifier: MPL-2.0
 import { Construct } from "constructs";
 import { TerraformBackend } from "../terraform-backend";
 import { keysToSnakeCase } from "../util";
@@ -6,6 +8,7 @@ import {
   DataTerraformRemoteStateConfig,
 } from "../terraform-remote-state";
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 export class CosBackend extends TerraformBackend {
   constructor(scope: Construct, private readonly props: CosBackendProps) {
     super(scope, "backend", "cos");
@@ -27,6 +30,7 @@ export class CosBackend extends TerraformBackend {
   }
 }
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 export class DataTerraformRemoteStateCos extends TerraformRemoteState {
   constructor(
     scope: Construct,

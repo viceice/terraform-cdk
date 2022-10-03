@@ -1,3 +1,5 @@
+// Copyright (c) HashiCorp, Inc
+// SPDX-License-Identifier: MPL-2.0
 // copied from https://github.com/aws/constructs/blob/e01e47f78ef1e9b600efcd23ff7705aa8d384017/lib/private/resolve.ts
 import { IConstruct } from "constructs";
 import {
@@ -301,6 +303,9 @@ function isConstruct(x: any): boolean {
   return x._children !== undefined && x._metadata !== undefined;
 }
 
+/**
+ * Resolves a number token
+ */
 function resolveNumberToken(x: number, context: IResolveContext): any {
   const token = TokenMap.instance().lookupNumberToken(x);
   if (token === undefined) {

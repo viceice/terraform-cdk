@@ -1,3 +1,5 @@
+// Copyright (c) HashiCorp, Inc
+// SPDX-License-Identifier: MPL-2.0
 import { Construct } from "constructs";
 import { TerraformRemoteState } from "./terraform-remote-state";
 import { TerraformElement } from "./terraform-element";
@@ -5,6 +7,7 @@ import { deepMerge } from "./util";
 
 const BACKEND_SYMBOL = Symbol.for("cdktf/TerraformBackend");
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 export abstract class TerraformBackend extends TerraformElement {
   constructor(scope: Construct, id: string, protected readonly name: string) {
     super(scope, id);

@@ -1,3 +1,5 @@
+// Copyright (c) HashiCorp, Inc
+// SPDX-License-Identifier: MPL-2.0
 import { ref } from "./tfExpression";
 import { Token } from "./tokens/token";
 import { snakeCase } from "./util";
@@ -6,7 +8,7 @@ import { snakeCase } from "./util";
  *
  * See {@link https://www.terraform.io/language/resources/provisioners/connection connection}
  */
-export interface ISSHProvisionerConnection {
+export interface SSHProvisionerConnection {
   /**
    * The connection type. Valid values are "ssh" and "winrm".
    * Provisioners typically assume that the remote system runs Microsoft Windows when using WinRM.
@@ -164,7 +166,7 @@ export interface ISSHProvisionerConnection {
  *
  * See {@link https://www.terraform.io/language/resources/provisioners/connection connection}
  */
-export interface IWinrmProvisionerConnection {
+export interface WinrmProvisionerConnection {
   /**
    * The connection type. Valid values are "ssh" and "winrm".
    * Provisioners typically assume that the remote system runs Microsoft Windows when using WinRM.
@@ -238,7 +240,7 @@ export interface IWinrmProvisionerConnection {
  *
  * See {@link https://www.terraform.io/language/resources/provisioners/file file}
  */
-export interface IFileProvisioner {
+export interface FileProvisioner {
   readonly type: "file";
   /**
    * The source file or directory. Specify it either relative to the current working directory or as an absolute path.
@@ -262,7 +264,7 @@ export interface IFileProvisioner {
   /**
    * Most provisioners require access to the remote resource via SSH or WinRM and expect a nested connection block with details about how to connect.
    */
-  readonly connection?: ISSHProvisionerConnection | IWinrmProvisionerConnection;
+  readonly connection?: SSHProvisionerConnection | WinrmProvisionerConnection;
 }
 
 /**
@@ -271,7 +273,7 @@ export interface IFileProvisioner {
  *
  * See {@link https://www.terraform.io/language/resources/provisioners/local-exec local-exec}
  */
-export interface ILocalExecProvisioner {
+export interface LocalExecProvisioner {
   readonly type: "local-exec";
   /**
    * This is the command to execute.
@@ -313,7 +315,7 @@ export interface ILocalExecProvisioner {
  *
  * See {@link https://www.terraform.io/language/resources/provisioners/remote-exec remote-exec}
  */
-export interface IRemoteExecProvisioner {
+export interface RemoteExecProvisioner {
   readonly type: "remote-exec";
 
   /**
@@ -340,7 +342,7 @@ export interface IRemoteExecProvisioner {
    * Most provisioners require access to the remote resource via SSH or WinRM and expect a nested connection block with details about how to connect.
    * A connection must be provided here or in the parent resource.
    */
-  readonly connection?: ISSHProvisionerConnection | IWinrmProvisionerConnection;
+  readonly connection?: SSHProvisionerConnection | WinrmProvisionerConnection;
 }
 
 /**

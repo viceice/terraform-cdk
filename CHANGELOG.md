@@ -1,3 +1,206 @@
+## 0.13.0
+
+**Breaking Changes**
+Abbreviated version below, for a guide see [Upgrade Guide for 0.13](https://www.terraform.io/cdktf/release/upgrade-guide-v0-13).
+
+0.13 includes performance improvements to generated providers. Instead of exporting a flat list of exports including all supported resources and data sources, we now export each construct and it's associated structures in their own namespace. Due to this, the way you import constructs from your CDKTF application will change. For more information regarding this release, and some of the reasonings behind the changes, please check out the [version 0.13 release post](https://cdk.tf/0.13).
+
+#### Typescript
+
+```typescript
+// Before version 0.13
+import { Container, Image, DockerProvider } from "@ckdtf/provider-docker";
+
+// Version 0.13
+import { Image } from "@cdktf/provider-docker/lib/image";
+import { DockerProvider } from "@cdktf/provider-docker/lib/provider";
+import { Container } from "@cdktf/provider-docker/lib/container";
+```
+
+#### Python
+
+```python
+# Before version 0.13
+from cdktf_cdktf_provider_kubernetes.kubernetes import Namespace, Service, Deployment, KubernetesProvider
+
+# Version 0.13
+from cdktf_cdktf_provider_kubernetes.kubernetes.provider import KubernetesProvider
+from cdktf_cdktf_provider_kubernetes.kubernetes.namespace import Namespace
+from cdktf_cdktf_provider_kubernetes.kubernetes.deployment import Deployment
+from cdktf_cdktf_provider_kubernetes.kubernetes.service import Service
+```
+
+#### Go
+
+> **Note:** For Go projects, another important thing to note is that we've also moved our pre-built providers to the `cdktf` Github Organization. You can find more about that change [here](https://github.com/hashicorp/terraform-cdk/issues/2146).
+
+```go
+// Before version 0.13
+import (
+  "github.com/cdktf/cdktf-provider-azurerm-go/azurerm"
+)
+
+// Version 0.13
+import (
+  azurermprovider "github.com/cdktf/cdktf-provider-azurerm-go/azurerm/provider"
+  "github.com/cdktf/cdktf-provider-azurerm-go/azurerm/networkinterface"
+)
+```
+
+#### Java
+
+```java
+// Before version 0.13
+import com.hashicorp.cdktf.providers.google.ComputeInstance;
+import com.hashicorp.cdktf.providers.google.GoogleProvider;
+
+// Version 0.13
+import com.hashicorp.cdktf.providers.google.compute_instance.ComputeInstance;
+import com.hashicorp.cdktf.providers.google.provider.GoogleProvider;
+```
+
+#### C\#
+
+```csharp
+// Before version 0.13
+using azurerm;
+
+// Version 0.13
+using azurerm.Provider;
+using azurerm.VirtualNetwork;
+```
+
+### feat
+
+- feat(provider-generator): namespace every resource / data source / provider [\#2087](https://github.com/hashicorp/terraform-cdk/pull/2087)
+- feat(provider-generator): Move generated files into their own directories [\#2153](https://github.com/hashicorp/terraform-cdk/pull/2153)
+
+### fix
+
+- fix(docs): Fix Aspects example [\#2152](https://github.com/hashicorp/terraform-cdk/pull/2152)
+
+### chore
+
+- chore: update documentation for version 0.13 release [\#2156](https://github.com/hashicorp/terraform-cdk/pull/2156)
+- chore: Upgrade guide for 0.13 [\#2155](https://github.com/hashicorp/terraform-cdk/pull/2155)
+- chore: Add version 0.13 upgrade guide to releases page [\#2161](https://github.com/hashicorp/terraform-cdk/pull/2161)
+- chore: Add redirect to incoming github issue [\#2159](https://github.com/hashicorp/terraform-cdk/pull/2159)
+
+## 0.12.3
+
+**Breaking Changes**
+
+A very minor change in the UX of the `cdktf get` command now generates the provider bindings for all languages (except TypeScript) in parallel. This speeds up the process in general, but on devices with limited memory it could lead to Out of Memory errors. If this happens you can limit the parallelism by providing the parallelism flag: `cdktf get --parallelism=1`.
+
+### fix
+
+- fix(provider-generator): Add special case in case resource is named 'object' [\#2138](https://github.com/hashicorp/terraform-cdk/pull/2138)
+- fix(docs): Fix two small bugs in the code causing it to not compile [\#2128](https://github.com/hashicorp/terraform-cdk/pull/2128)
+- fix(lib): Add missing config options for AzurermBackend [\#2127](https://github.com/hashicorp/terraform-cdk/pull/2127)
+- fix(cli): Update require package in template [\#2118](https://github.com/hashicorp/terraform-cdk/pull/2118)
+- fix: Change url of `pipenv` in log [\#2117](https://github.com/hashicorp/terraform-cdk/pull/2117)
+- fix(cli): support using remote execution in Terraform Cloud with up to 500 MB (instead of 10MB) [\#2108](https://github.com/hashicorp/terraform-cdk/pull/2108)
+- fix(docs): remove empty code block [\#2102](https://github.com/hashicorp/terraform-cdk/pull/2102)
+- fix: update constructs and go runtime versions [\#2096](https://github.com/hashicorp/terraform-cdk/pull/2096)
+- fix(cli): add sentry DSN in build process [\#2085](https://github.com/hashicorp/terraform-cdk/pull/2085)
+- fix(docs): fix wrong command mentioned in TFC docs [\#2083](https://github.com/hashicorp/terraform-cdk/pull/2083)
+- fix: let create changelog script use commit hashes from PRs instead of finding merge commit messages that may not always exist [\#2068](https://github.com/hashicorp/terraform-cdk/pull/2068)
+
+### feat
+
+- feat(cli): include language used in cdktf init telemetry event [\#2123](https://github.com/hashicorp/terraform-cdk/pull/2123)
+- feat(cli): support generating provider bindings in parallel [\#2111](https://github.com/hashicorp/terraform-cdk/pull/2111)
+
+### chore
+
+- chore(cli): Use the npm package's repository field for generating go package name [\#2145](https://github.com/hashicorp/terraform-cdk/pull/2145)
+- chore: npm-check-updates && yarn upgrade [\#2142](https://github.com/hashicorp/terraform-cdk/pull/2142)
+- chore: split up unit tests per package [\#2122](https://github.com/hashicorp/terraform-cdk/pull/2122)
+- chore: Update diagram with new provider count [\#2104](https://github.com/hashicorp/terraform-cdk/pull/2104)
+- chore: change YT link to cut version [\#2103](https://github.com/hashicorp/terraform-cdk/pull/2103)
+- chore(cli): Don't trim output for unstructured logs [\#2100](https://github.com/hashicorp/terraform-cdk/pull/2100)
+- chore: only run expensive tasks on source code changes [\#2099](https://github.com/hashicorp/terraform-cdk/pull/2099)
+- chore: Support building with Go 1.19 [\#2098](https://github.com/hashicorp/terraform-cdk/pull/2098)
+- chore: fix go azure example [\#2092](https://github.com/hashicorp/terraform-cdk/pull/2092)
+- chore: fix the project board TS errors [\#2091](https://github.com/hashicorp/terraform-cdk/pull/2091)
+- chore: npm-check-updates && yarn upgrade [\#2090](https://github.com/hashicorp/terraform-cdk/pull/2090)
+- chore: npm-check-updates && yarn upgrade [\#2077](https://github.com/hashicorp/terraform-cdk/pull/2077)
+- chore(examples): clean up examples [\#2069](https://github.com/hashicorp/terraform-cdk/pull/2069)
+- chore(docs): Check whether links work :) [\#2063](https://github.com/hashicorp/terraform-cdk/pull/2063)
+- chore: ensure we have license header [\#1960](https://github.com/hashicorp/terraform-cdk/pull/1960)
+- chore: measure and print memory consumption of build and synth steps for examples in CI [\#2060](https://github.com/hashicorp/terraform-cdk/pull/2060)
+- chore: start running tests against TF 1.2.8 and drop running against 1.0.7 [\#2058](https://github.com/hashicorp/terraform-cdk/pull/2058)
+
+## 0.12.2
+
+**Breaking Changes**
+
+A very minor change in the interface names for provisioners occured [to support them in JSII languages](https://github.com/hashicorp/terraform-cdk/pull/2042), renaming the following interfaces:
+
+- `ISSHProvisionerConnection` to `SSHProvisionerConnection`
+- `IWinrmProvisionerConnection` to `WinrmProvisionerConnection`
+- `IFileProvisioner` to `FileProvisioner`
+- `ILocalExecProvisioner` to `LocalExecProvisioner`
+- `IRemoteExecProvisioner` to `RemoteExecProvisioner`
+
+Another very minor change is that we now use the `CloudBackend` by default when running cdktf init. This requires Terraform >=1.1, therefore an error is thrown on `cdktf init` if you want to use Terraform Cloud and are on an older version. Already existing projects are not affected and you can use `cdktf init --local` and configure the `RemoteBackend` if you need to use an older version.
+
+### feat
+
+- feat(cli): throw an error if a user tries to create a new project with TFC on an old TF version [\#2062](https://github.com/hashicorp/terraform-cdk/pull/2062)
+- feat: install time tool in Docker container to be able to use it for memory consumption tracking in tests [\#2059](https://github.com/hashicorp/terraform-cdk/pull/2059)
+- feat: add Go port of TypeScript Google CloudRun example [\#2035](https://github.com/hashicorp/terraform-cdk/pull/2035)
+- feat(lib): add support for cloud backend [\#1924](https://github.com/hashicorp/terraform-cdk/pull/1924)
+
+### fix
+
+- fix(provider-generator): use terraform get instead of init to download modules [\#2057](https://github.com/hashicorp/terraform-cdk/pull/2057)
+- fix(lib): Add missing config options for S3Backend: skipRegionValidation, assumeRolePolicyArns, assumeRoleTags, and assumeRoleTransitiveTagKeys [\#2050](https://github.com/hashicorp/terraform-cdk/pull/2050)
+- fix: support provisioners in JSII languages [\#2042](https://github.com/hashicorp/terraform-cdk/pull/2042)
+- fix(hcl2json): add fs-extra to dependencies [\#2040](https://github.com/hashicorp/terraform-cdk/pull/2040)
+- fix(lib): Improve error message when provider constructs are missing [\#2039](https://github.com/hashicorp/terraform-cdk/pull/2039)
+- fix(cli): Make provider add command case insensitive for provider names [\#2038](https://github.com/hashicorp/terraform-cdk/pull/2038)
+- fix(cli): run a speculative plan on diff [\#2033](https://github.com/hashicorp/terraform-cdk/pull/2033)
+
+### chore
+
+- chore(cli): remove red and magenta from colors for stack names [\#2064](https://github.com/hashicorp/terraform-cdk/pull/2064)
+- chore: add link to hybrid module talk [\#2054](https://github.com/hashicorp/terraform-cdk/pull/2054)
+- chore: make Terraform 1.2.8 available in Docker image [\#2051](https://github.com/hashicorp/terraform-cdk/pull/2051)
+- chore: document updating the API documentation [\#2046](https://github.com/hashicorp/terraform-cdk/pull/2046)
+- chore(docs): Remove positional language + fix style nits [\#2045](https://github.com/hashicorp/terraform-cdk/pull/2045)
+- chore(lib): deprecate Resource in favor of Construct [\#2044](https://github.com/hashicorp/terraform-cdk/pull/2044)
+- chore: update links in our youtube playlist examples [\#2043](https://github.com/hashicorp/terraform-cdk/pull/2043)
+- chore: npm-check-updates && yarn upgrade [\#2025](https://github.com/hashicorp/terraform-cdk/pull/2025)
+- chore: translate parts of the documentation [\#2011](https://github.com/hashicorp/terraform-cdk/pull/2011)
+
+### refactor
+
+- refactor: port example script to JS [\#2047](https://github.com/hashicorp/terraform-cdk/pull/2047)
+
+## 0.12.1
+
+### fix
+
+- fix(cli): add major versions greater 1 to package name when installing pre-built providers for go [\#2002](https://github.com/hashicorp/terraform-cdk/pull/2002)
+- fix(cli): Wait for other stacks to complete if one of them failed [\#1987](https://github.com/hashicorp/terraform-cdk/pull/1987)
+- fix(cli): fix version detection for Java being a bit too optimistic about the package name [\#1995](https://github.com/hashicorp/terraform-cdk/pull/1995)
+- fix(cli): Improve wording around starting from an existing Terraform project [\#1985](https://github.com/hashicorp/terraform-cdk/pull/1985)
+- fix(tests): force local as Go now has pre-built providers [\#2005](https://github.com/hashicorp/terraform-cdk/pull/2005)
+- fix(tests): as predicted, the test needs to be skipped for a bit of time [\#2004](https://github.com/hashicorp/terraform-cdk/pull/2004)
+- fix(docs): fix aspects example not being valid TypeScript [\#1986](https://github.com/hashicorp/terraform-cdk/pull/1986)
+- fix(docs): fix links by removing all links to the providers-and-resources page that does not exist anymore [\#2010](https://github.com/hashicorp/terraform-cdk/pull/2010)
+- fix: don't lock state in tests [\#1990](https://github.com/hashicorp/terraform-cdk/pull/1990)
+- fix: don't overwrite all `NODE_OPTIONS` [\#2009](https://github.com/hashicorp/terraform-cdk/pull/2009)
+
+### chore
+
+- chore: add vercel config for cdk.tf redirects page [\#2016](https://github.com/hashicorp/terraform-cdk/pull/2016)
+- chore: add notes for how to clean the local dotnet cache [\#2022](https://github.com/hashicorp/terraform-cdk/pull/2022)
+- chore: add issue template for filing bugs with a pre-built providers label [\#1983](https://github.com/hashicorp/terraform-cdk/pull/1983)
+- chore: npm-check-updates && yarn upgrade [\#1984](https://github.com/hashicorp/terraform-cdk/pull/1984)
+- chore: npm-check-updates && yarn upgrade [\#2007](https://github.com/hashicorp/terraform-cdk/pull/2007)
+
 ## 0.12.0
 
 **Breaking Changes**

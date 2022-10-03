@@ -1,3 +1,5 @@
+// Copyright (c) HashiCorp, Inc
+// SPDX-License-Identifier: MPL-2.0
 // Copied from https://github.com/aws/constructs/blob/e01e47f78ef1e9b600efcd23ff7705aa8d384017/lib/lazy.ts
 import { captureStackTrace } from "./private/stack-trace";
 import { IPostProcessor, IResolvable, IResolveContext } from "./resolvable";
@@ -145,6 +147,7 @@ export class Lazy {
   }
 }
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 export abstract class LazyBase implements IResolvable {
   public readonly creationStack: string[];
   private postProcessors: IPostProcessor[] = [];
@@ -181,6 +184,7 @@ export abstract class LazyBase implements IResolvable {
   }
 }
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 class LazyString extends LazyBase {
   constructor(private readonly producer: IStringProducer) {
     super();
@@ -191,6 +195,7 @@ class LazyString extends LazyBase {
   }
 }
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 class LazyNumber extends LazyBase {
   constructor(private readonly producer: INumberProducer) {
     super();
@@ -201,6 +206,7 @@ class LazyNumber extends LazyBase {
   }
 }
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 class LazyList extends LazyBase {
   constructor(
     private readonly producer: IListProducer,
@@ -218,6 +224,7 @@ class LazyList extends LazyBase {
   }
 }
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 class LazyAny extends LazyBase {
   constructor(
     private readonly producer: IAnyProducer,

@@ -1,3 +1,5 @@
+// Copyright (c) HashiCorp, Inc
+// SPDX-License-Identifier: MPL-2.0
 import { ok } from "assert";
 import { Construct } from "constructs";
 import { Token } from ".";
@@ -10,6 +12,7 @@ export interface TerraformElementMetadata {
   readonly stackTrace: string[];
 }
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 export class TerraformElement extends Construct {
   public readonly cdktfStack: TerraformStack;
   protected readonly rawOverrides: any = {};

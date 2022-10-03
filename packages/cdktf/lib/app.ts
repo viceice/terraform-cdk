@@ -1,3 +1,5 @@
+// Copyright (c) HashiCorp, Inc
+// SPDX-License-Identifier: MPL-2.0
 import { Construct, IConstruct } from "constructs";
 import * as fs from "fs";
 import { version } from "../package.json";
@@ -91,6 +93,7 @@ export class App extends Construct {
   public static of(construct: IConstruct): App {
     return _lookup(construct);
 
+    // eslint-disable-next-line jsdoc/require-jsdoc
     function _lookup(c: IConstruct): App {
       if (App.isApp(c)) {
         return c;

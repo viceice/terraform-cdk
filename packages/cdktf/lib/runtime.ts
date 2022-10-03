@@ -1,3 +1,5 @@
+// Copyright (c) HashiCorp, Inc
+// SPDX-License-Identifier: MPL-2.0
 // ----------------------------------------------------------------------
 // PROPERTY MAPPERS
 //
@@ -18,6 +20,7 @@ import { TerraformDynamicExpression } from "./terraform-dynamic-expression";
 // vs. complex types).
 export type Mapper = (x: any) => any;
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 function identity(x: any) {
   return x;
 }
@@ -62,6 +65,7 @@ export function listMapper(
   };
 }
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 export function hashMapper(elementMapper: Mapper): Mapper {
   return (x: any) => {
     if (!canInspect(x)) {

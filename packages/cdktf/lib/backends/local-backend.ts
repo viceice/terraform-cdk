@@ -1,3 +1,5 @@
+// Copyright (c) HashiCorp, Inc
+// SPDX-License-Identifier: MPL-2.0
 import * as path from "path";
 import { Construct } from "constructs";
 import { TerraformBackend } from "../terraform-backend";
@@ -8,6 +10,7 @@ import {
 } from "../terraform-remote-state";
 import { TerraformStack } from "..";
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 export class LocalBackend extends TerraformBackend {
   private readonly props: LocalBackendProps;
   constructor(scope: Construct, props: LocalBackendProps = {}) {
@@ -40,6 +43,7 @@ export class LocalBackend extends TerraformBackend {
   }
 }
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 export class DataTerraformRemoteStateLocal extends TerraformRemoteState {
   constructor(
     scope: Construct,

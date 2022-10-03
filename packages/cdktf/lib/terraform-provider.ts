@@ -1,3 +1,5 @@
+// Copyright (c) HashiCorp, Inc
+// SPDX-License-Identifier: MPL-2.0
 import { Construct } from "constructs";
 import { Token } from "./tokens";
 import { TerraformElement } from "./terraform-element";
@@ -10,6 +12,7 @@ export interface TerraformProviderConfig {
   readonly terraformProviderSource?: string;
 }
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 export abstract class TerraformProvider extends TerraformElement {
   public readonly terraformResourceType: string;
   public readonly terraformGeneratorMetadata?: TerraformProviderGeneratorMetadata;

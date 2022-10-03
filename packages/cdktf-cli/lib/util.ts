@@ -1,3 +1,5 @@
+// Copyright (c) HashiCorp, Inc
+// SPDX-License-Identifier: MPL-2.0
 import { SpawnOptions } from "child_process";
 import { spawn } from "cross-spawn";
 import * as fs from "fs-extra";
@@ -188,4 +190,24 @@ export async function downloadFile(
 
     request.end();
   });
+}
+
+/**
+ * Awaits a promise and makes sure it's error (if any) is only thrown after all other promises are settled
+ * if the promise does not throw an error, the other promises won't be awaited
+ * @param p promise to await
+ * @param promises promises to await to be all settled if p failed before throwing error that p failed with
+ */
+export async function ensureAllSettledBeforeThrowing(
+  p: Promise<any>,
+  promises: (Promise<any> | undefined)[]
+) {
+  try {
+    await p;
+  } catch (e) {
+    // if an error happened, we still need to wait for all other promises that
+    // are currently in progress to complete to allow them to properly wrap up
+    await Promise.allSettled(promises);
+    throw e;
+  }
 }

@@ -1,3 +1,5 @@
+// Copyright (c) HashiCorp, Inc
+// SPDX-License-Identifier: MPL-2.0
 import * as path from "path";
 import * as fs from "fs";
 import { TerraformStack } from "./terraform-stack";
@@ -23,6 +25,7 @@ export interface IManifest {
   readonly version: string;
 }
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 export class Manifest implements IManifest {
   public static readonly fileName = "manifest.json";
   public static readonly stacksFolder = "stacks";

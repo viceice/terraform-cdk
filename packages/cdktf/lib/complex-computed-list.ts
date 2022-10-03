@@ -1,3 +1,5 @@
+// Copyright (c) HashiCorp, Inc
+// SPDX-License-Identifier: MPL-2.0
 import { IResolvable, Token, IResolveContext } from "./tokens";
 import {
   IInterpolatingParent,
@@ -6,6 +8,7 @@ import {
 import { propertyAccess, Fn } from ".";
 import { captureStackTrace } from "./tokens/private/stack-trace";
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 abstract class ComplexResolvable implements IResolvable, ITerraformAddressable {
   public readonly creationStack: string[];
 
@@ -41,6 +44,7 @@ abstract class ComplexResolvable implements IResolvable, ITerraformAddressable {
   }
 }
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 abstract class ComplexComputedAttribute
   extends ComplexResolvable
   implements IInterpolatingParent
@@ -99,6 +103,7 @@ abstract class ComplexComputedAttribute
   public abstract interpolationForAttribute(terraformAttribute: string): any;
 }
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 export class StringMap
   extends ComplexResolvable
   implements ITerraformAddressable
@@ -125,6 +130,7 @@ export class StringMap
   }
 }
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 export class NumberMap
   extends ComplexResolvable
   implements ITerraformAddressable
@@ -151,6 +157,7 @@ export class NumberMap
   }
 }
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 export class BooleanMap
   extends ComplexResolvable
   implements ITerraformAddressable
@@ -175,6 +182,7 @@ export class BooleanMap
   }
 }
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 export class AnyMap extends ComplexResolvable implements ITerraformAddressable {
   constructor(
     protected terraformResource: IInterpolatingParent,
@@ -254,6 +262,7 @@ export class ComplexComputedList extends ComplexComputedAttribute {
   }
 }
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 export abstract class ComplexList
   extends ComplexResolvable
   implements ITerraformAddressable
@@ -285,6 +294,7 @@ export abstract class ComplexList
   }
 }
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 export abstract class ComplexMap
   extends ComplexResolvable
   implements ITerraformAddressable
@@ -303,6 +313,7 @@ export abstract class ComplexMap
   }
 }
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 export class ComplexObject extends ComplexComputedAttribute {
   /**
    * @param terraformResource
@@ -369,6 +380,7 @@ export class ComplexObject extends ComplexComputedAttribute {
   }
 }
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 abstract class MapList
   extends ComplexResolvable
   implements ITerraformAddressable, IInterpolatingParent
@@ -420,6 +432,7 @@ abstract class MapList
   }
 }
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 export class StringMapList extends MapList {
   constructor(
     protected terraformResource: IInterpolatingParent,
@@ -434,6 +447,7 @@ export class StringMapList extends MapList {
   }
 }
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 export class NumberMapList extends MapList {
   constructor(
     protected terraformResource: IInterpolatingParent,
@@ -448,6 +462,7 @@ export class NumberMapList extends MapList {
   }
 }
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 export class BooleanMapList extends MapList {
   constructor(
     protected terraformResource: IInterpolatingParent,
@@ -462,6 +477,7 @@ export class BooleanMapList extends MapList {
   }
 }
 
+// eslint-disable-next-line jsdoc/require-jsdoc
 export class AnyMapList extends MapList {
   constructor(
     protected terraformResource: IInterpolatingParent,

@@ -1,3 +1,5 @@
+// Copyright (c) HashiCorp, Inc
+// SPDX-License-Identifier: MPL-2.0
 import * as fs from "fs-extra";
 import * as path from "path";
 import { CodeMaker } from "codemaker";
@@ -8,7 +10,11 @@ import {
   TerraformDependencyConstraint,
   logger,
 } from "../config";
-import { ProviderSchema, readSchema } from "./generator/provider-schema";
+import {
+  ProviderSchema,
+  readProviderSchema,
+  readModuleSchema,
+} from "./generator/provider-schema";
 import { TerraformProviderGenerator } from "./generator/provider-generator";
 import { ModuleGenerator } from "./generator/module-generator";
 import { ModuleSchema } from "./generator/module-schema";
@@ -46,6 +52,7 @@ export async function generateJsiiLanguage(
 export interface GetOptions {
   readonly targetLanguage: Language;
   readonly codeMakerOutput: string;
+  readonly jsiiParallelism?: number;
   /**
    * Path to copy the output .jsii file.
    * @default - jsii file is not emitted
@@ -223,29 +230,46 @@ export class ConstructsMaker {
     );
     this.versions = {};
   }
-
-  private async generateTypescript(target: ConstructsMakerTarget) {
+  private async generateTypescriptProvider(
+    target: ConstructsMakerProviderTarget
+  ) {
     const endSchemaReadTimer = logTimespan(`Reading Schema for ${target.name}`);
-    const schema = await readSchema([target]);
+    const schema = await readProviderSchema(target);
     endSchemaReadTimer();
 
     const endTSTimer = logTimespan(`Generate Typescript for ${target.name}`);
-    if (target instanceof ConstructsMakerModuleTarget) {
-      target.spec = schema.moduleSchema[target.moduleKey];
-      new ModuleGenerator(this.code, [target]);
-    }
+    const generator = new TerraformProviderGenerator(this.code, schema);
+    generator.generate(target);
 
-    if (target instanceof ConstructsMakerProviderTarget) {
-      const generator = new TerraformProviderGenerator(
-        this.code,
-        schema.providerSchema
-      );
-      generator.generate(target);
-
-      this.versions = { ...this.versions, ...generator.versions };
-    }
-
+    this.versions = { ...this.versions, ...generator.versions };
     endTSTimer();
+  }
+
+  private async generateTypescriptModule(target: ConstructsMakerModuleTarget) {
+    const endSchemaReadTimer = logTimespan(`Reading Schema for ${target.name}`);
+    const schema = await readModuleSchema(target);
+    endSchemaReadTimer();
+
+    const endTSTimer = logTimespan(`Generate Typescript for ${target.name}`);
+    target.spec = schema[target.moduleKey];
+    new ModuleGenerator(this.code, [target]);
+    endTSTimer();
+  }
+
+  private async generateTypescript(target: ConstructsMakerTarget) {
+    if (target.isModule) {
+      await this.generateTypescriptModule(
+        target as ConstructsMakerModuleTarget
+      );
+    } else if (target.isProvider) {
+      await this.generateTypescriptProvider(
+        target as ConstructsMakerProviderTarget
+      );
+    } else {
+      throw new Error(
+        `Unknown target type used to generate bindings: ${target.name}`
+      );
+    }
   }
 
   // emits a versions.json file with a map of the used version for each provider fqpn
@@ -255,6 +279,77 @@ export class ConstructsMaker {
     this.code.line(JSON.stringify(this.versions, null, 2));
     this.code.closeFile(filePath);
     return filePath;
+  }
+
+  private async generateJsiiLanguage(target: ConstructsMakerTarget) {
+    // these are the module dependencies we compile against
+    const deps = ["@types/node", "constructs", "cdktf"];
+    const opts: srcmak.Options = {
+      entrypoint: target.fileName,
+      deps: deps.map((dep) =>
+        path.dirname(require.resolve(`${dep}/package.json`))
+      ),
+      moduleKey: target.moduleKey,
+    };
+
+    // used for testing.
+    if (this.options.outputJsii) {
+      opts.jsii = { path: this.options.outputJsii };
+    }
+
+    if (this.isPythonTarget) {
+      opts.python = {
+        outdir: this.codeMakerOutdir,
+        moduleName: target.srcMakName,
+      };
+    }
+
+    if (this.isJavaTarget) {
+      opts.java = {
+        outdir: ".", // generated java files aren't packaged, so just include directly in app
+        package: `imports.${target.srcMakName}`,
+      };
+    }
+
+    if (this.isCsharpTarget) {
+      opts.csharp = {
+        outdir: this.codeMakerOutdir,
+        namespace: target.srcMakName,
+      };
+    }
+
+    if (this.isGoTarget) {
+      // TODO: check if needed for modules somehow
+      // const targetType = target.isProvider ? 'provider' : 'module';
+
+      // jsii-srcmac will produce a folder inside this dir named after "packageName"
+      // so this results in e.g. .gen/hashicorp/random
+      const outdir = path.join(this.codeMakerOutdir, target.namespace ?? "");
+
+      opts.golang = {
+        outdir,
+        moduleName: await determineGoModuleName(outdir), // e.g. `github.com/org/userproject/.gen/hashicorp`
+        packageName: target.srcMakName, // package will be named e.g. random for hashicorp/random
+      };
+    }
+
+    if (
+      process.env.NODE_OPTIONS &&
+      !process.env.NODE_OPTIONS.includes(`--max-old-space-size`)
+    ) {
+      logger.warn(`found NODE_OPTIONS environment variable without a setting for --max-old-space-size.
+The provider generation needs a substantial amount of memory (~13GB) for some providers and languages.
+So cdktf-cli sets it to NODE_OPTIONS="--max-old-space-size=16384" by default. As your environment already contains
+a NODE_OPTIONS variable, we won't override it. Hence, the provider generation might fail with an out of memory error.`);
+    } else {
+      // increase memory to allow generating large providers (i.e. aws or azurerm for Go)
+      // srcmak is going to spawn a childprocess (for jsii-pacmak) which is going to be affected by this env var
+      process.env.NODE_OPTIONS = "--max-old-space-size=16384";
+    }
+
+    const jsiiTimer = logTimespan("JSII");
+    await generateJsiiLanguage(this.code, opts);
+    jsiiTimer();
   }
 
   public async generate() {
@@ -271,79 +366,26 @@ export class ConstructsMaker {
     }
 
     if (!this.isJavascriptTarget || this.options.outputJsii) {
-      for (const target of this.targets) {
-        // these are the module dependencies we compile against
-        const deps = ["@types/node", "constructs", "cdktf"];
-        const opts: srcmak.Options = {
-          entrypoint: target.fileName,
-          deps: deps.map((dep) =>
-            path.dirname(require.resolve(`${dep}/package.json`))
-          ),
-          moduleKey: target.moduleKey,
-        };
+      const numberOfWorkers = Math.max(
+        1,
+        this.options.jsiiParallelism === -1
+          ? this.targets.length
+          : this.options.jsiiParallelism || 1
+      );
 
-        // used for testing.
-        if (this.options.outputJsii) {
-          opts.jsii = { path: this.options.outputJsii };
-        }
-
-        if (this.isPythonTarget) {
-          opts.python = {
-            outdir: this.codeMakerOutdir,
-            moduleName: target.srcMakName,
-          };
-        }
-
-        if (this.isJavaTarget) {
-          opts.java = {
-            outdir: ".", // generated java files aren't packaged, so just include directly in app
-            package: `imports.${target.srcMakName}`,
-          };
-        }
-
-        if (this.isCsharpTarget) {
-          opts.csharp = {
-            outdir: this.codeMakerOutdir,
-            namespace: target.srcMakName,
-          };
-        }
-
-        if (this.isGoTarget) {
-          // TODO: check if needed for modules somehow
-          // const targetType = target.isProvider ? 'provider' : 'module';
-
-          // jsii-srcmac will produce a folder inside this dir named after "packageName"
-          // so this results in e.g. .gen/hashicorp/random
-          const outdir = path.join(
-            this.codeMakerOutdir,
-            target.namespace ?? ""
+      const work = [...this.targets];
+      const workers = new Array(numberOfWorkers).fill(async () => {
+        let target: ConstructsMakerTarget | undefined;
+        while ((target = work.pop())) {
+          const endJsiiTarget = logTimespan(
+            `Generating JSII bindings for ${target.name}`
           );
-
-          opts.golang = {
-            outdir,
-            moduleName: await determineGoModuleName(outdir), // e.g. `github.com/org/userproject/.gen/hashicorp`
-            packageName: target.srcMakName, // package will be named e.g. random for hashicorp/random
-          };
+          await this.generateJsiiLanguage(target);
+          endJsiiTarget();
         }
+      });
 
-        if (
-          process.env.NODE_OPTIONS &&
-          !process.env.NODE_OPTIONS.includes(`--max-old-space-size`)
-        ) {
-          logger.warn(`found NODE_OPTIONS environment variable without a setting for --max-old-space-size.
-The provider generation needs a substantial amount of memory (~13GB) for some providers and languages.
-So cdktf-cli sets it to NODE_OPTIONS="--max-old-space-size=16384" by default. As your environment already contains
-a NODE_OPTIONS variable, we won't override it. Hence, the provider generation might fail with an out of memory error.`);
-        } else {
-          // increase memory to allow generating large providers (i.e. aws or azurerm for Go)
-          // srcmak is going to spawn a childprocess (for jsii-pacmak) which is going to be affected by this env var
-          process.env.NODE_OPTIONS = "--max-old-space-size=16384";
-        }
-
-        const jsiiTimer = logTimespan("JSII");
-        await generateJsiiLanguage(this.code, opts);
-        jsiiTimer();
-      }
+      await Promise.all(workers.map((fn) => fn()));
     }
 
     for (const target of this.targets) {
