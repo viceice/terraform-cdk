@@ -152,6 +152,8 @@ Options:
   -h, --help                                    Show help                                                                                                                                               [boolean]
 ```
 
+~> **Note:** The `parallelism` flag has a different behavior than the [terraform parallelism flag](/cli/commands/apply#parallelism-n). To set the custom terraform parallelism flag, please use the `--terraform-parallelism` flag instead.
+
 **Examples**
 
 Deploy an application.
@@ -219,6 +221,8 @@ Options:
   -h, --help                               Show help                                                                                                                                                    [boolean]
 ```
 
+~> **Note:** The `parallelism` flag has a different behavior than the [terraform parallelism flag](/cli/commands/apply#parallelism-n). To set the custom terraform parallelism flag, please use the `--terraform-parallelism` flag instead.
+
 **Examples**
 
 Destroy an application.
@@ -275,6 +279,8 @@ Options:
   --output, -o       Output directory                                                                                                                      [required] [default: "cdktf.out"]
   -h, --help         Show help                                                                                                                                                     [boolean]
 ```
+
+~> **Note:** The `parallelism` flag has a different behavior than the [terraform parallelism flag](/cli/commands/plan#parallelism-n). To set the custom terraform parallelism flag, please use the `--terraform-parallelism` flag instead.
 
 Examples:
 
@@ -502,6 +508,8 @@ Options:
       --parallelism               Number of concurrent CDKTF stacks to run. Defaults to infinity, denoted by -1                                                                                         [number] [default: -1]
   -h, --help                      Show help                                                                                                                                                                          [boolean]
 ```
+
+~> **Note:** The `parallelism` flag has a different behavior than the [terraform parallelism flag](/cli/commands/apply#parallelism-n). To set the custom terraform parallelism flag, please use the `--terraform-parallelism` flag instead.
 
 **Examples**
 
