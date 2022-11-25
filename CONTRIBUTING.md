@@ -62,13 +62,15 @@ $ yarn watch
 
 This will watch for changes in all packages.
 
+**Note (for cdktf-cli only):** We're using [esbuild](https://esbuild.github.io/) for transpilation and bundling of the Typescript code. However, `esbuild` only transpiles, but doesn't do any type checking. That's why we've added an extra step as a pre-commit hook which transpiles the code with `tsc` to ensure commits don't have type errors.
+
 ### CLI changes
 
 If your changes target only CLI and packages used by the CLI, running `yarn watch` will be sufficient. Although it's technically a bit different from what we ship you should be able to use a direct path to our binary entry point to execute commands. You can put this in a shell alias like this:
 
 ```shell
-alias cdktfl='/path/to/terraform-cdk/packages/cdktf-cli/bin/cdktf' # For running cdktf locally
-alias cdktfld='node --inspect-brk /path/to/terraform-cdk/packages/cdktf-cli/bin/cdktf.js' # For running cdktf locally with debugging
+alias cdktfl='/path/to/terraform-cdk/packages/cdktf-cli/bundle/bin/cdktf' # For running cdktf locally
+alias cdktfld='node --inspect-brk /path/to/terraform-cdk/packages/cdktf-cli/bundle/bin/cdktf.js' # For running cdktf locally with debugging
 
 $ cdktfl get
 ```
@@ -185,6 +187,22 @@ $ yarn link "cdktf"
 
 From here on both, the `cli` and the `cdktf` packages are linked and changes will be reflected immediatlely.
 
+### Known errors
+
+#### Python
+
+If you get this error message when trying to use a local build of `cdktf`:
+
+> ERROR: THESE PACKAGES DO NOT MATCH THE HASHES FROM THE REQUIREMENTS FILE. If you have updated the package versions, please update the hashes. Otherwise, examine the package contents carefully; someone may have tampered with them.
+
+Run:
+
+```
+./tools/align-version.sh -dev.111212112 && yarn build && yarn package
+```
+
+This builds a package with a development version which skips the tamper check in Python. (We once accidentally released `cdktf 0.0.0` which is the reason why Python knows some valid hashes for that `0.0.0` version and will fail as they won't match.)
+
 ## Rebasing contributions against main
 
 PRs in this repo are merged using the [`rebase`](https://git-scm.com/docs/git-rebase) method. This keeps
@@ -243,6 +261,10 @@ reset the `FEATURE_FLAGS` map for the next cycle.
 
 We recommend enabling logging when you develop new features. To get detailed information about CDKTF operations, set `CDKTF_LOG_LEVEL` to `debug`.
 
+### JSII
+
+To enable debug output of JSII, set `JSII_DEBUG` to e.g. `1`. There's also `JSII_DEBUG_TIMING` which can be set to e.g. `1` as well.
+
 ## Releasing
 
 ### Steps
@@ -268,6 +290,20 @@ Most of our tests are automated but there are some workflows we need to manually
 - Update the prebuilt provider repository [like this](https://github.com/hashicorp/cdktf-repository-manager/pull/48) (If the release contains breaking changes the commit message needs to have a `!` after the scope so that the minor version is bumped. Example: `chore!: update cdktf version`) and run the [prebuilt provider upgrade workflow](https://github.com/hashicorp/cdktf-repository-manager/actions/workflows/upgrade-repositories.yml)
 - Update the learn examples and the end to end examples
 - Check if there are PRs left behind on our [triage board](https://github.com/orgs/hashicorp/projects/125/views/4)
+
+#### Retrying a broken deployment
+
+The release workflow uses sentry as the source of truth for releases. The downside of that, however, is that if the release is broken at some point and a new release is required, it will not be possible to run the release workflow. In order to work around that, the sentry release needs to be reverted.
+
+```sh
+# Install Sentry CLI and login
+npm i -g @sentry/cli
+sentry-cli login
+# List all releases (optional)
+sentry-cli releases list --org hashicorp
+# Delete the release, Note: there will be no confirmation for deleting the release!
+sentry-cli releases delete --org hashicorp <release> # e.g. cdktf-cli-0.14.0
+```
 
 ### Repositories to update
 

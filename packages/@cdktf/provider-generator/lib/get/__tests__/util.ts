@@ -2,10 +2,9 @@
 // SPDX-License-Identifier: MPL-2.0
 import * as fs from "fs";
 import { withTempDir } from "../../util";
-import { Language, ConstructsMaker } from "../constructs-maker";
+import { Language, TerraformModuleConstraint } from "@cdktf/commons";
+import { ConstructsMaker } from "../constructs-maker";
 import * as path from "path";
-
-import { TerraformModuleConstraint } from "../../config";
 
 export function expectModuleToMatchSnapshot(
   testName: string,
@@ -33,11 +32,11 @@ export function expectModuleToMatchSnapshot(
       fs.mkdirSync("work");
       const workdir = path.join(curdir, "work");
 
-      const maker = new ConstructsMaker(
-        { codeMakerOutput: workdir, targetLanguage: Language.TYPESCRIPT },
-        [constraint]
-      );
-      await maker.generate();
+      const maker = new ConstructsMaker({
+        codeMakerOutput: workdir,
+        targetLanguage: Language.TYPESCRIPT,
+      });
+      await maker.generate([constraint]);
 
       const output = fs.readFileSync(
         path.join(workdir, "modules/module.ts"),

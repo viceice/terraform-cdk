@@ -1,3 +1,109 @@
+## 0.15.0 (unreleased)
+
+**Breaking changes**
+We split up our `cdktf-cli` package into `cdktf-cli` for the UI parts, utilizing `@cdktf/cli-core` for the functionality. If you previously relied on the internal `cdktf-cli/lib` entrypoint you should switch to `@cdktf/cli-core`.
+
+## 0.14.1
+
+A broken import that only appeared in the bundled `cdktf-cli` that we publish broke the `0.14.0` release. This patch release fixes this.
+
+### fix
+
+- fix(provider-generator): fix cross package import which breaks the cdktf-cli release bundle [\#2302](https://github.com/hashicorp/terraform-cdk/pull/2302)
+
+### chore
+
+- chore: document authoring cdktf constructs [\#2287](https://github.com/hashicorp/terraform-cdk/pull/2287)
+
+## 0.14.0
+
+**Breaking changes**
+Back in October, we [announced significant performance improvements with CDKTF version 0.13](https://www.hashicorp.com/blog/cdk-for-terraform-0-13-significantly-improves-performance). These improvements required breaking changes for which we provided backward-compatible provider bindings in version 0.13. As announced, the 0.12 (non-namespaced) provider bindings will no longer work starting with CDKTF 0.14. Refer to the [upgrade guide for 0.13](https://developer.hashicorp.com/terraform/cdktf/release/upgrade-guide-v0-13) to learn how to update your imports for these changes.
+
+### feat
+
+- feat(cli): add provider upgrade command [\#2202](https://github.com/hashicorp/terraform-cdk/pull/2202)
+- feat(cli): Add option to select providers to add with init [\#2184](https://github.com/hashicorp/terraform-cdk/pull/2184)
+- feat(cli): only re-generate provider bindings on get if necessary [\#2266](https://github.com/hashicorp/terraform-cdk/pull/2266)
+- feat(lib): expose operators on their own API class [\#2292](https://github.com/hashicorp/terraform-cdk/pull/2292)
+- feat(lib): Introduce `Token.nullValue()` that allows to pass null to Terraform configurations in languages other than TypeScript [\#2284](https://github.com/hashicorp/terraform-cdk/pull/2284)
+- feat(cli): Automatically Update Locked Providers [\#2020](https://github.com/hashicorp/terraform-cdk/pull/2020)
+- feat(lib): Added testing matchers for Providers [\#2154](https://github.com/hashicorp/terraform-cdk/pull/2154)
+- feat(lib): adds failed process output to test matcher APIs #1953 [\#2196](https://github.com/hashicorp/terraform-cdk/pull/2196)
+
+### fix
+
+- fix(cli): do not check for version when DISABLE_VERSION_CHECK [\#2257](https://github.com/hashicorp/terraform-cdk/pull/2257)
+- fix(docs): fix module code example [\#2256](https://github.com/hashicorp/terraform-cdk/pull/2256)
+- fix(docs): fix links to pre-built provider repositories [\#2264](https://github.com/hashicorp/terraform-cdk/pull/2264)
+- fix(docs): fix a couple of typos in stacks.mdx [\#2269](https://github.com/hashicorp/terraform-cdk/pull/2269)
+- fix(examples): fix CI for Python examples [\#2291](https://github.com/hashicorp/terraform-cdk/pull/2291)
+- fix: set global flag to be able to start search for code blocks at an index [\#2274](https://github.com/hashicorp/terraform-cdk/pull/2274)
+
+### chore
+
+- chore(docs): Add CDK for Terraform to page titles [\#2278](https://github.com/hashicorp/terraform-cdk/pull/2278)
+- chore: document Python hash error in local development [\#2272](https://github.com/hashicorp/terraform-cdk/pull/2272)
+- chore: document JSII debug flags in contribution guide [\#2271](https://github.com/hashicorp/terraform-cdk/pull/2271)
+- chore: update LICENSE [\#2268](https://github.com/hashicorp/terraform-cdk/pull/2268)
+- chore(cli): Prevent minification when watching cdktf-cli [\#2262](https://github.com/hashicorp/terraform-cdk/pull/2262)
+- chore(lib): Add deprecation notices to backends that were deprecated in Terraform v1.2.3 and removed in TF 1.3 [\#2261](https://github.com/hashicorp/terraform-cdk/pull/2261)
+- chore: adding mgarrell777 to docs codeowners to be notified for docs changes [\#2259](https://github.com/hashicorp/terraform-cdk/pull/2259)
+- chore: add ecs-microservices example [\#2252](https://github.com/hashicorp/terraform-cdk/pull/2252)
+- chore: sync version and changelog from the 0.13.3 backported release [\#2251](https://github.com/hashicorp/terraform-cdk/pull/2251)
+- chore: install pre-built provider with exact version [\#2249](https://github.com/hashicorp/terraform-cdk/pull/2249)
+- chore: cache examples and terraform plugins [\#2213](https://github.com/hashicorp/terraform-cdk/pull/2213)
+
+## 0.13.3
+
+### fix
+
+- fix: Redact authorization header when error logging from TFC/TFE [\#2241](https://github.com/hashicorp/terraform-cdk/pull/2241)
+
+## 0.13.2
+
+### fix
+
+- fix(provider-generator): don't require arrays wrapping variable / output declarations [\#2199](https://github.com/hashicorp/terraform-cdk/pull/2199)
+- fix(cli): Use 'id' as argument name for all templates [\#2119](https://github.com/hashicorp/terraform-cdk/pull/2119)
+- fix(cli): use a custom user-agent when talking to TFC [\#2210](https://github.com/hashicorp/terraform-cdk/pull/2210)
+- fix(cli): Ignore local obj/ dir in C# template [\#2217](https://github.com/hashicorp/terraform-cdk/pull/2217)
+- fix(deps): Use apt instead of yum, since base image is debian based now [\#2216](https://github.com/hashicorp/terraform-cdk/pull/2216)
+- fix: correctly denote all of our redirects as temporary because they might change [\#2218](https://github.com/hashicorp/terraform-cdk/pull/2218)
+
+### chore
+
+- chore: Update Go to version 1.18 on windows workflows [\#2219](https://github.com/hashicorp/terraform-cdk/pull/2219)
+- chore: Update Digital Team Files [\#2203](https://github.com/hashicorp/terraform-cdk/pull/2203)
+- chore(cli): change url to pre-built providers to one we control [\#2181](https://github.com/hashicorp/terraform-cdk/pull/2181)
+- chore(cli): Move things to src/ folder [\#2130](https://github.com/hashicorp/terraform-cdk/pull/2130)
+- chore(deps): Update docker image to use new jsii/superchain tag [\#2214](https://github.com/hashicorp/terraform-cdk/pull/2214)
+- chore(docs): rewrite internal redirects [\#2204](https://github.com/hashicorp/terraform-cdk/pull/2204)
+
+### feat
+
+- feat: add CODEOWNERS file for automatic PR review assignment [\#2212](https://github.com/hashicorp/terraform-cdk/pull/2212)
+
+## 0.13.1
+
+### feat
+
+- feat(cli): Add support for terraform's parallelism flag [\#2107](https://github.com/hashicorp/terraform-cdk/pull/2107)
+- feat: add redirect link to pre-built providers json file [\#2180](https://github.com/hashicorp/terraform-cdk/pull/2180)
+- feat(cli): link to troubleshooting page for error [\#2192](https://github.com/hashicorp/terraform-cdk/pull/2192)
+
+### fix
+
+- fix(provider-generator): change Static resource class to StaticResource as their namespace 'static' is not valid in TypeScript re-exports [\#2168](https://github.com/hashicorp/terraform-cdk/pull/2168)
+- fix(cli): dont wrap list terminal output [\#2188](https://github.com/hashicorp/terraform-cdk/pull/2188)
+- fix(cli): handle missing package versions for non-npm packages [\#2177](https://github.com/hashicorp/terraform-cdk/pull/2177)
+- fix(docs): Fix upgrade guide imports for Python [\#2171](https://github.com/hashicorp/terraform-cdk/pull/2171)
+- fix(docs): update old config key [\#2195](https://github.com/hashicorp/terraform-cdk/pull/2195)
+
+### chore
+
+- chore: Update link to blogpost [\#2176](https://github.com/hashicorp/terraform-cdk/pull/2176)
+
 ## 0.13.0
 
 **Breaking Changes**

@@ -3,8 +3,8 @@
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import { ConstructsMaker, Language } from "../../constructs-maker";
-import { TerraformModuleConstraint } from "../../../config";
+import { Language, TerraformModuleConstraint } from "@cdktf/commons";
+import { ConstructsMaker } from "../../constructs-maker";
 import { expectModuleToMatchSnapshot } from "../util";
 
 test("generate some modules", async () => {
@@ -17,11 +17,11 @@ test("generate some modules", async () => {
     "terraform-aws-modules/eks/aws@7.0.1"
   );
 
-  const maker = new ConstructsMaker(
-    { codeMakerOutput: workdir, targetLanguage: Language.TYPESCRIPT },
-    [constraint]
-  );
-  await maker.generate();
+  const maker = new ConstructsMaker({
+    codeMakerOutput: workdir,
+    targetLanguage: Language.TYPESCRIPT,
+  });
+  await maker.generate([constraint]);
 
   const output = fs.readFileSync(
     path.join(workdir, "modules/terraform-aws-modules/aws/eks.ts"),
@@ -54,11 +54,11 @@ test("generate multiple aws modules", async () => {
     new TerraformModuleConstraint("terraform-aws-modules/rds-aurora/aws@4.1.0"),
   ];
 
-  const maker = new ConstructsMaker(
-    { codeMakerOutput: workdir, targetLanguage: Language.TYPESCRIPT },
-    constraints
-  );
-  await maker.generate();
+  const maker = new ConstructsMaker({
+    codeMakerOutput: workdir,
+    targetLanguage: Language.TYPESCRIPT,
+  });
+  await maker.generate(constraints);
 
   const vpcOutput = fs.readFileSync(
     path.join(workdir, "modules/terraform-aws-modules/aws/vpc.ts"),
@@ -87,11 +87,11 @@ test("generate module that can't be initialized", async () => {
     "milliHQ/next-js/aws@1.0.0-canary.5"
   );
 
-  const maker = new ConstructsMaker(
-    { codeMakerOutput: workdir, targetLanguage: Language.TYPESCRIPT },
-    [constraint]
-  );
-  await maker.generate();
+  const maker = new ConstructsMaker({
+    codeMakerOutput: workdir,
+    targetLanguage: Language.TYPESCRIPT,
+  });
+  await maker.generate([constraint]);
 
   const output = fs.readFileSync(
     path.join(workdir, "modules/milliHQ/aws/next-js.ts"),

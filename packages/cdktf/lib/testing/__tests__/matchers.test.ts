@@ -4,8 +4,9 @@ import { Testing } from "../index";
 import { TestResource, DockerImage } from "../../../test/helper/resource";
 import {
   toBeValidTerraform,
-  getToHaveResourceWithProperties,
   toPlanSuccessfully,
+  getToHaveResourceWithProperties,
+  getToHaveProviderWithProperties,
   getToHaveDataSourceWithProperties,
   asymetricDeepEqualIgnoringObjectCasing,
 } from "../matchers";
@@ -129,7 +130,7 @@ describe("matchers", () => {
 
       expect(res.pass).toBeTruthy();
       expect(res.message).toMatchInlineSnapshot(`
-        "Expected no test_resource with properties {} to be present in synthesised stack.
+        "Expected no test_resource with properties {} to be present in synthesized stack.
         Found 1 test_resource resources instead:
         [
           {
@@ -150,7 +151,7 @@ describe("matchers", () => {
 
       expect(res.pass).toBeFalsy();
       expect(res.message).toMatchInlineSnapshot(`
-        "Expected test_data_source with properties {} to be present in synthesised stack.
+        "Expected test_data_source with properties {} to be present in synthesized stack.
         Found no test_data_source resources instead"
       `);
     });
@@ -200,6 +201,60 @@ describe("matchers", () => {
     });
   });
 
+  describe("toHaveProviderWithProperties", () => {
+    const toHaveProviderWithProperties = getToHaveProviderWithProperties();
+    let synthesizedStack: any;
+    let synthesizedStackNoProvider: any;
+    beforeEach(() => {
+      synthesizedStack = Testing.synthScope((scope) => {
+        new DockerProvider(scope, "test-provider", {
+          alias: "test-alias",
+          ssh_opts: ["-o", "StrictHostKeyChecking=no"],
+        });
+        new DockerImage(scope, "test-image", { name: "test" });
+      });
+
+      synthesizedStackNoProvider = Testing.synthScope((scope) => {
+        new DockerImage(scope, "test", { name: "test" });
+      });
+    });
+
+    it("should find provider", () => {
+      const res = toHaveProviderWithProperties(
+        synthesizedStack,
+        DockerProvider,
+        { alias: "test-alias", ssh_opts: ["-o", "StrictHostKeyChecking=no"] }
+      );
+
+      expect(res.pass).toBeTruthy();
+    });
+
+    it("should not find provider", () => {
+      const res = toHaveProviderWithProperties(
+        synthesizedStackNoProvider,
+        DockerProvider,
+        {}
+      );
+
+      expect(res.pass).toBeFalsy();
+    });
+
+    it("should not find resources", () => {
+      const res = toHaveProviderWithProperties(synthesizedStack, TestResource);
+
+      expect(res.pass).toBeFalsy();
+    });
+
+    it("should not find data sources", () => {
+      const res = toHaveProviderWithProperties(
+        synthesizedStack,
+        TestDataSource
+      );
+
+      expect(res.pass).toBeFalsy();
+    });
+  });
+
   describe("toBeValidTerraform", () => {
     it("fails if anything but a path is passed", () => {
       const res = toBeValidTerraform("not a path");
@@ -239,6 +294,16 @@ describe("matchers", () => {
           "Expected subject to be a valid terraform stack"
         )
       );
+      expect(res.message).toEqual(
+        expect.stringContaining(
+          "There are some problems with the configuration, described below."
+        )
+      );
+      expect(res.message).toEqual(
+        expect.stringContaining(
+          "Expected subject to be a valid terraform stack"
+        )
+      );
     });
   });
 
@@ -259,6 +324,7 @@ describe("matchers", () => {
       new DockerImage(stack, "test", { name: "test" });
 
       const res = toPlanSuccessfully(Testing.fullSynth(stack));
+
       expect(res.pass).toBeTruthy();
       expect(res.message).toMatchInlineSnapshot(
         `"Expected subject not to plan successfully"`

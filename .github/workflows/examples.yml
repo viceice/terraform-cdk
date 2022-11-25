@@ -1,15 +1,14 @@
 name: Examples Integration
 on:
-  pull_request:
-    paths-ignore:
-      - "**.md"
-      - "docs/**"
-      - "website/**"
-      - "cdk.tf/**"
-      - "tools/update-github-project-board/**"
+  workflow_call:
+    inputs:
+      concurrency_group_prefix:
+        default: pr
+        required: false
+        type: string
 
 concurrency:
-  group: examples-${{ github.head_ref }}
+  group: ${{ inputs.concurrency_group_prefix }}-examples-${{ github.head_ref }}
   cancel-in-progress: true
 
 jobs:
@@ -25,7 +24,7 @@ jobs:
           tfDefault=$(cat .terraform.versions.json | jq -r '.default')
           examples=$(npx lerna list --scope "@examples/*" | jq  -R -s -c --arg tfDefault "${tfDefault}" 'split("\n") | map(select(length > 0)) | { target: values, terraform: [$tfDefault]}')
           echo $examples
-          echo "::set-output name=examples::$examples"
+          echo "examples=$examples" >> $GITHUB_OUTPUT
 
   examples:
     needs: build-example-matrix
@@ -40,15 +39,30 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v2
+      - name: Get yarn cache directory path
+        id: global-cache-dir-path
+        run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
+      - uses: actions/cache@v3
+        id: global-cache # use this to check for `cache-hit` (`steps.global-cache.outputs.cache-hit != 'true'`)
+        with:
+          path: ${{ steps.global-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
       - name: installing dependencies
         run: |
           yarn install
+      - name: lint
+        run: yarn lint:examples
+      - name: align version (Python only)
+        if: startsWith(matrix.target, '@examples/python') # lint:examples ensures this prefix
+        run: tools/align-version.sh "-dev.$GITHUB_RUN_ID"
       - name: compile
-        run: |
-          yarn lint:examples
-          yarn build
+        run: yarn build
         env:
           TERRAFORM_BINARY_NAME: "terraform${{ matrix.terraform }}"
+          TF_PLUGIN_CACHE_DIR: ${{ steps.global-cache-dir-path.outputs.dir }}/terraform-plugins
+          GOCACHE: ${{ steps.global-cache-dir-path.outputs.dir }}/go-cache
       - name: create bundle
         run: yarn package
       - name: examples integration tests
@@ -58,3 +72,5 @@ jobs:
           TEST_TARGET: "${{ matrix.target }}"
           TERRAFORM_BINARY_NAME: "terraform${{ matrix.terraform }}"
           MAVEN_OPTS: "-Xmx3G"
+          TF_PLUGIN_CACHE_DIR: ${{ steps.global-cache-dir-path.outputs.dir }}/terraform-plugins
+          GOCACHE: ${{ steps.global-cache-dir-path.outputs.dir }}/go-cache
