@@ -96,6 +96,7 @@
   "devDependencies": {
     "@types/jest": "^25.2.3",
     "@types/json-stable-stringify": "^1.0.34",
+    "@types/lodash.isequal": "^4.5.6",
     "@types/node": "^14.18.33",
     "@types/semver": "^7.3.13",
     "@typescript-eslint/eslint-plugin": "^4.33.0",
@@ -114,12 +115,14 @@
   "dependencies": {
     "archiver": "5.3.1",
     "json-stable-stringify": "^1.0.2",
+    "lodash.isequal": "^4.5.0",
     "semver": "^7.3.8"
   },
   "bundledDependencies": [
     "archiver",
     "json-stable-stringify",
-    "semver"
+    "semver",
+    "lodash.isequal"
   ],
   "stability": "experimental",
   "peerDependencies": {
