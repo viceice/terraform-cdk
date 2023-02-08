@@ -129,7 +129,11 @@ export type TerraformDeployState =
   | { type: "external sentinel override reply"; overridden: boolean };
 
 export interface Terraform {
-  init: (upgrade: boolean, noColor?: boolean) => Promise<void>;
+  init: (opts: {
+    needsUpgrade: boolean;
+    noColor?: boolean;
+    needsLockfileUpdate: boolean;
+  }) => Promise<void>;
   plan: (opts: {
     destroy: boolean;
     refreshOnly?: boolean;

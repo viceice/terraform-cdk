@@ -233,14 +233,9 @@ export class CdktfStack {
       this.createTerraformLogHandler.bind(this)
     );
 
-    const needsInit = await this.checkNeedsInit();
-    if (!needsInit) {
-      // Skip terraform init as everything's up to date
-      return terraform;
-    }
-
+    const needsLockfileUpdate = await this.checkNeedsLockfileUpdate();
     const needsUpgrade = await this.checkNeedsUpgrade();
-    await terraform.init(needsUpgrade, noColor);
+    await terraform.init({ needsUpgrade, noColor, needsLockfileUpdate });
     return terraform;
   }
 
@@ -255,7 +250,7 @@ export class CdktfStack {
     }, {} as Record<string, ProviderConstraint>);
   }
 
-  private async checkNeedsInit(): Promise<boolean> {
+  private async checkNeedsLockfileUpdate(): Promise<boolean> {
     const lock = new TerraformProviderLock(this.stack.workingDirectory);
 
     const lockFileExists = await lock.hasProviderLockFile();

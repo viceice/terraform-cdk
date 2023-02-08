@@ -106,14 +106,18 @@ export class TerraformCli implements Terraform {
         createTerraformLogHandler(phase, filter)(stderr.toString(), true);
   }
 
-  public async init(needsUpgrade: boolean, noColor?: boolean): Promise<void> {
+  public async init(opts: {
+    needsUpgrade: boolean;
+    noColor?: boolean;
+    needsLockfileUpdate: boolean;
+  }): Promise<void> {
     await this.setUserAgent();
 
     const args = ["init", "-input=false"];
-    if (needsUpgrade) {
+    if (opts.needsUpgrade) {
       args.push("-upgrade");
     }
-    if (noColor) {
+    if (opts.noColor) {
       args.push("-no-color");
     }
 
@@ -132,22 +136,24 @@ export class TerraformCli implements Terraform {
     // TODO: this might have performance implications because we don't know if we're
     // running a remote plan or a local one (so we run it always for all platforms)
     // while we'd only need it for remote plans
-    await exec(
-      terraformBinaryName,
-      [
-        "providers",
-        "lock",
-        "-platform=linux_amd64",
-        ...(noColor ? ["-no-color"] : []),
-      ],
-      {
-        cwd: this.workdir,
-        env: process.env,
-        signal: this.abortSignal,
-      },
-      this.onStdout("init"),
-      this.onStderr("init")
-    );
+    if (opts.needsLockfileUpdate) {
+      await exec(
+        terraformBinaryName,
+        [
+          "providers",
+          "lock",
+          "-platform=linux_amd64",
+          ...(opts.noColor ? ["-no-color"] : []),
+        ],
+        {
+          cwd: this.workdir,
+          env: process.env,
+          signal: this.abortSignal,
+        },
+        this.onStdout("init"),
+        this.onStderr("init")
+      );
+    }
   }
 
   private get isCloudStack(): boolean {
