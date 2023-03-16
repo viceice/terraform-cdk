@@ -3,7 +3,6 @@
 import { Construct } from "constructs";
 import { keysToSnakeCase, deepMerge, terraformBinaryName } from "../util";
 import { DataTerraformRemoteState } from "./remote-backend";
-import { Fn } from "../terraform-functions";
 import { TerraformRemoteState } from "../terraform-remote-state";
 import { TerraformBackend } from "../terraform-backend";
 import { ValidateBinaryVersion } from "../validations";
@@ -20,14 +19,14 @@ export function getHostNameType(hostname?: string): "tfc" | "tfe" {
 }
 
 /**
- * The Cloud Backend synthesizes a {@link https://www.terraform.io/cli/cloud/settings#the-cloud-block cloud block}.
+ * The Cloud Backend synthesizes a {@link https://developer.hashicorp.com/terraform/cli/cloud/settings#the-cloud-block cloud block}.
  * The cloud block is a nested block within the top-level terraform settings block.
  * It specifies which Terraform Cloud workspaces to use for the current working directory.
  * The cloud block only affects Terraform CLI's behavior.
  * When Terraform Cloud uses a configuration that contains a cloud block - for example, when a workspace is configured to use a VCS provider directly - it ignores the block and behaves according to its own workspace settings.
  */
 export class CloudBackend extends TerraformBackend {
-  constructor(scope: Construct, private readonly props: CloudBackendProps) {
+  constructor(scope: Construct, private readonly props: CloudBackendConfig) {
     super(scope, "backend", "cloud");
 
     this.node.addValidation(
@@ -86,15 +85,15 @@ export class CloudBackend extends TerraformBackend {
 }
 
 /**
- * The Cloud Backend synthesizes a {@link https://www.terraform.io/cli/cloud/settings#the-cloud-block cloud block}.
+ * The Cloud Backend synthesizes a {@link https://developer.hashicorp.com/terraform/cli/cloud/settings#the-cloud-block cloud block}.
  * The cloud block is a nested block within the top-level terraform settings block.
  * It specifies which Terraform Cloud workspaces to use for the current working directory.
  * The cloud block only affects Terraform CLI's behavior.
  * When Terraform Cloud uses a configuration that contains a cloud block - for example, when a workspace is configured to use a VCS provider directly - it ignores the block and behaves according to its own workspace settings.
  *
- * https://www.terraform.io/cli/cloud/settings#arguments
+ * https://developer.hashicorp.com/terraform/cli/cloud/settings#arguments
  */
-export interface CloudBackendProps {
+export interface CloudBackendConfig {
   /**
    * The name of the organization containing the workspace(s) the current configuration should use.
    */
@@ -151,7 +150,7 @@ export class TaggedCloudWorkspaces extends CloudWorkspace {
   }
   public toTerraform(): any {
     return {
-      tags: Fn.toset(this.tags),
+      tags: this.tags,
     };
   }
 }

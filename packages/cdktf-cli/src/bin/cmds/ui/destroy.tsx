@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 /* eslint-disable no-control-regex */
 import React from "react";
 
@@ -6,6 +11,7 @@ import {
   StreamView,
   ExecutionStatusBottomBar,
   ApproveBottomBar,
+  OverrideBottomBar,
 } from "./components";
 
 interface DestroyConfig {
@@ -16,6 +22,10 @@ interface DestroyConfig {
   ignoreMissingStackDependencies?: boolean;
   parallelism?: number;
   terraformParallelism?: number;
+  noColor?: boolean;
+  migrateState?: boolean;
+  vars?: string[];
+  varFiles?: string[];
 }
 
 export const Destroy = ({
@@ -26,6 +36,10 @@ export const Destroy = ({
   ignoreMissingStackDependencies,
   parallelism,
   terraformParallelism,
+  noColor,
+  migrateState,
+  vars,
+  varFiles,
 }: DestroyConfig): React.ReactElement => {
   const { status, logEntries } = useCdktfProject(
     { outDir, synthCommand },
@@ -36,6 +50,10 @@ export const Destroy = ({
         ignoreMissingStackDependencies,
         parallelism,
         terraformParallelism,
+        noColor,
+        migrateState,
+        vars,
+        varFiles,
       })
   );
 
@@ -46,6 +64,13 @@ export const Destroy = ({
         onApprove={status.approve}
         onDismiss={status.dismiss}
         onStop={status.stop}
+      />
+    ) : status?.type ===
+      "waiting for override of sentinel policy check failure" ? (
+      <OverrideBottomBar
+        stackName={status.stackName}
+        onOverride={status.override}
+        onReject={status.reject}
       />
     ) : (
       <ExecutionStatusBottomBar status={status} actionName="destroying" />

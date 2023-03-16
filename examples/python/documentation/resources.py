@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 
 from imports.kubernetes.namespace import NamespaceMetadata
 from imports.aws.data_aws_region import DataAwsRegion
@@ -47,7 +50,7 @@ class ReferencesStack(TerraformStack):
         Deployment(self, "nginx-deployment",
             metadata=DeploymentMetadata(
                 name="nginx",
-                namespace=exampleNamespace.metadata.name,
+                namespace=exampleNamespace.metadata.name, # Reference the name property
                 labels={"app": app}
             ),
             spec=DeploymentSpec(
@@ -125,9 +128,9 @@ class EscapeHatchDynamicStack(TerraformStack):
                 vpc_id="vpcs",
                 egress=[
                     {
-                        "fromPort": 0,
-                        "toPort": 0,
-                        "ciderBlocks": ["0.0.0.0/0"],
+                        "from_port": 0,
+                        "to_port": 0,
+                        "cidr_blocks": ["0.0.0.0/0"],
                         "protocol": "-1"
                     }
                 ]
@@ -136,9 +139,9 @@ class EscapeHatchDynamicStack(TerraformStack):
         sq.add_override("dynamic.ingress", {
             "for_each": ports.list_value,
             "content": {
-                "fromPort": "${ingress.value}",
-                "toPort": "${ingress.value}",
-                "ciderBlocks": ["0.0.0.0/0"],
+                "from_port": "${ingress.value}",
+                "to_port": "${ingress.value}",
+                "cidr_blocks": ["0.0.0.0/0"],
                 "protocol": "-1"
             }
         })

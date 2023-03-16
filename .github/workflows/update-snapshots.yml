@@ -1,12 +1,16 @@
 name: update-snapshots
 on:
-  pull_request_target:
+  pull_request:
     types:
       - opened
       - edited
       - synchronize
       - labeled
       - reopened
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   update-snapshots-setup:
     if: contains(github.event.pull_request.labels.*.name, 'ci/update-snapshots')
@@ -18,41 +22,43 @@ jobs:
     outputs:
       terraformVersion: ${{ steps.tf-version.outputs.default }}
     steps:
-      - uses: actions-ecosystem/action-add-labels@v1
+      - uses: actions-ecosystem/action-add-labels@v1.1.0
         with:
           labels: ci/updating-snapshots
-      - uses: actions-ecosystem/action-remove-labels@v1
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions-ecosystem/action-remove-labels@v1.3.0
         with:
           labels: ci/update-snapshots
+          github_token: ${{ secrets.GITHUB_TOKEN }}
       - id: tf-version
         run: |
           DEFAULT_TERRAFORM_VERSION=$(cat .terraform.versions.json | jq -r '.default')
           echo "default=$DEFAULT_TERRAFORM_VERSION" >> $GITHUB_OUTPUT
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3.1.0
         with:
           ref: "refs/pull/${{ github.event.number }}/merge"
+      - name: "Add Git safe.directory" # Go 1.18+ started embedding repo info in the build and e.g. building @cdktf/hcl2json fails without this
+        run: git config --global --add safe.directory /__w/terraform-cdk/terraform-cdk
       - name: Get yarn cache directory path
         id: global-cache-dir-path
         run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
-      - uses: actions/cache@v3
+      - uses: actions/cache@v3.0.11
         id: global-cache # use this to check for `cache-hit` (`steps.global-cache.outputs.cache-hit != 'true'`)
         with:
           path: ${{ steps.global-cache-dir-path.outputs.dir }}
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-
       - name: installing dependencies and build
         run: |
-          yarn install
+          yarn install --frozen-lockfile --prefer-offline
           yarn build
           yarn package
       - name: Upload dist # needed for running the integration tests on windows
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3.1.1
         with:
           name: dist
           path: dist
       - name: Upload edge-provider bindings # needed for running the integration tests on windows
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3.1.1
         with:
           name: edge-provider-bindings
           path: packages/@cdktf/provider-generator/edge-provider-bindings
@@ -62,9 +68,10 @@ jobs:
     needs: update-snapshots-windows
     if: always()
     steps:
-      - uses: actions-ecosystem/action-remove-labels@v1
+      - uses: actions-ecosystem/action-remove-labels@v1.3.0
         with:
           labels: ci/updating-snapshots
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
   update-snapshots-linux:
     needs: update-snapshots-setup
@@ -74,31 +81,32 @@ jobs:
     env:
       CHECKPOINT_DISABLE: "1"
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{ github.event.pull_request.head.repo.full_name }}
-
-      - name: Get yarn cache directory path
-        id: global-cache-dir-path
-        run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
-
-      - uses: actions/cache@v3
-        id: global-cache # use this to check for `cache-hit` (`steps.global-cache.outputs.cache-hit != 'true'`)
-        with:
-          path: ${{ steps.global-cache-dir-path.outputs.dir }}
-          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-
+      - name: "Add Git safe.directory" # Go 1.18+ started embedding repo info in the build and e.g. building @cdktf/hcl2json fails without this
+        run: git config --global --add safe.directory /__w/terraform-cdk/terraform-cdk
 
       - name: Set git identity
         run: |-
           git config user.name github-team-tf-cdk
           git config user.email github-team-tf-cdk@hashicorp.com
 
+      - name: Get yarn cache directory path
+        id: global-cache-dir-path
+        run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache@v3.0.11
+        id: global-cache # use this to check for `cache-hit` (`steps.global-cache.outputs.cache-hit != 'true'`)
+        with:
+          path: ${{ steps.global-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+
       - name: installing dependencies and build
         run: |
-          yarn install
+          yarn install --frozen-lockfile --prefer-offline
           yarn build
           yarn package
 
@@ -132,7 +140,7 @@ jobs:
 
       - name: Push changes
         if: steps.self_mutation.outputs.self_mutation_happened
-        uses: ad-m/github-push-action@master
+        uses: ad-m/github-push-action@v0.6.0
         with:
           github_token: ${{ secrets.TERRAFORM_CDK_PUSH_GITHUB_TOKEN }}
           branch: ${{ github.event.pull_request.head.ref }}
@@ -142,7 +150,7 @@ jobs:
     # which circumvents issues where new and similar snapshots
     # are written by both runs and will overwrite each other
     needs: [update-snapshots-setup, update-snapshots-linux]
-    runs-on: windows-2019
+    runs-on: windows-2022
     permissions:
       contents: write
       pull-requests: write
@@ -150,21 +158,21 @@ jobs:
     env:
       CHECKPOINT_DISABLE: "1"
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3.1.0
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{ github.event.pull_request.head.repo.full_name }}
 
       # windows env setup (we use a Docker image for Linux version above)
       - name: HashiCorp - Setup Terraform
-        uses: hashicorp/setup-terraform@v1
+        uses: hashicorp/setup-terraform@v2.0.3
         with:
           terraform_wrapper: false
           terraform_version: ${{ needs.update-snapshots-setup.outputs.terraformVersion }}
       - name: Install pipenv
         run: pip install pipenv
       - name: Install Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3.3.1
         with:
           go-version: 1.18.x
 
@@ -172,13 +180,11 @@ jobs:
         id: global-cache-dir-path
         run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v3.0.11
         id: global-cache # use this to check for `cache-hit` (`steps.global-cache.outputs.cache-hit != 'true'`)
         with:
           path: ${{ steps.global-cache-dir-path.outputs.dir }}
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-
 
       - name: Set git identity
         run: |-
@@ -186,13 +192,13 @@ jobs:
           git config user.email github-team-tf-cdk@hashicorp.com
 
       - name: Download dist
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3.0.1
         with:
           name: dist
           path: dist
 
       - name: Download edge-provider bindings
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3.0.1
         with:
           name: edge-provider-bindings
           path: test/edge-provider-bindings
@@ -222,7 +228,7 @@ jobs:
 
       - name: Push changes
         if: steps.self_mutation.outputs.self_mutation_happened
-        uses: ad-m/github-push-action@master
+        uses: ad-m/github-push-action@v0.6.0
         with:
           github_token: ${{ secrets.TERRAFORM_CDK_PUSH_GITHUB_TOKEN }}
           branch: ${{ github.event.pull_request.head.ref }}

@@ -27,7 +27,7 @@ class TFExpression extends Intrinsic implements IResolvable {
 
     if (typeof resolvedArg === "object" && resolvedArg !== null) {
       return `{${Object.keys(resolvedArg)
-        .map((key) => `${key} = ${this.resolveArg(context, arg[key])}`)
+        .map((key) => `"${key}" = ${this.resolveArg(context, arg[key])}`)
         .join(", ")}}`;
     }
 
@@ -58,7 +58,11 @@ class TFExpression extends Intrinsic implements IResolvable {
     }
 
     // Only a token reference
-    if (tokenList.literals.length === 0 && numberOfTokens === 1) {
+    if (
+      tokenList.literals.length === 0 &&
+      tokenList.escapes.length === 0 &&
+      numberOfTokens === 1
+    ) {
       return resolvedArg;
     }
 
@@ -246,7 +250,7 @@ export function conditional(
   return new ConditionalExpression(condition, trueValue, falseValue);
 }
 
-// https://www.terraform.io/docs/language/expressions/operators.html
+// https://developer.hashicorp.com/terraform/language/expressions/operators
 export type Operator =
   | "!"
   | "-"
@@ -316,13 +320,21 @@ class FunctionCall extends TFExpression {
 
   public resolve(context: IResolveContext): string {
     const suppressBraces = context.suppressBraces;
+    const originalIgnoreEscapes = context.ignoreEscapes;
+    const originalWarnEscapes = context.warnEscapes;
+
     context.suppressBraces = true;
+    context.ignoreEscapes = true;
+    context.warnEscapes = true;
 
     const serializedArgs = this.args
       .map((arg) => this.resolveArg(context, arg))
       .join(", ");
 
     const expr = `${this.name}(${serializedArgs})`;
+
+    context.ignoreEscapes = originalIgnoreEscapes;
+    context.warnEscapes = originalWarnEscapes;
 
     return suppressBraces ? expr : `\${${expr}}`;
   }
@@ -336,7 +348,7 @@ export const FOR_EXPRESSION_KEY = ref("key");
 export const FOR_EXPRESSION_VALUE = ref("val");
 
 /**
- * https://www.terraform.io/docs/language/expressions/for.html
+ * https://developer.hashicorp.com/terraform/language/expressions/for
  */
 class ForExpression extends TFExpression {
   constructor(

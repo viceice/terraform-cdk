@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 // DOCS_BLOCK_START:assets
 using System;
 using System.IO;
@@ -16,20 +19,24 @@ namespace Examples
         public MyAssetStack(Construct scope, string name) : base(scope, name)
         {
 
-            new AwsProvider(this, "aws", new AwsProviderConfig {
+            new AwsProvider(this, "aws", new AwsProviderConfig
+            {
                 Region = "eu-central-1"
             });
 
-            S3Bucket bucket = new S3Bucket(this, "bucket", new S3BucketConfig {
+            S3Bucket bucket = new S3Bucket(this, "bucket", new S3BucketConfig
+            {
                 Bucket = "demo"
             });
 
-            TerraformAsset asset = new TerraformAsset(this, "lambda-asset", new TerraformAssetConfig {
+            TerraformAsset asset = new TerraformAsset(this, "lambda-asset", new TerraformAssetConfig
+            {
                 Path = Path.Join(Environment.CurrentDirectory, "lambda"),
                 Type = AssetType.ARCHIVE
             });
 
-            new S3BucketObject(this, "lambda-archive", new S3BucketObjectConfig {
+            new S3BucketObject(this, "lambda-archive", new S3BucketObjectConfig
+            {
                 Bucket = bucket.Bucket,
                 Key = asset.FileName,
                 Source = asset.Path

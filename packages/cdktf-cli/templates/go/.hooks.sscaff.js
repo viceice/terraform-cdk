@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 const { execSync } = require('child_process');
 const { readFileSync, writeFileSync } = require('fs');
 const { readFile } = require('fs-extra');
@@ -28,7 +33,7 @@ exports.post = options => {
   // Terraform Cloud configuration settings if the organization name and workspace is set.
   if (options.OrganizationName != '') {
     console.log(`\nGenerating Terraform Cloud configuration for '${options.OrganizationName}' organization and '${options.WorkspaceName}' workspace.....`)
-    terraformCloudConfig(options.$base, options.OrganizationName, options.WorkspaceName)
+    terraformCloudConfig(options.$base, options.OrganizationName, options.WorkspaceName, options.TerraformRemoteHostname)
   }
 
   // dist package
@@ -48,12 +53,12 @@ exports.post = options => {
   console.log(readFileSync('./help', 'utf-8'));
 };
 
-function terraformCloudConfig(baseName, organizationName, workspaceName) {
+function terraformCloudConfig(baseName, organizationName, workspaceName, terraformRemoteHostname) {
   template = readFileSync('./main.go', 'utf-8');
 
   result = template.replace(`NewMyStack(app, "${baseName}")`, `stack := NewMyStack(app, "${baseName}")
-	cdktf.NewCloudBackend(stack, &cdktf.CloudBackendProps{
-		Hostname:     jsii.String("app.terraform.io"),
+	cdktf.NewCloudBackend(stack, &cdktf.CloudBackendConfig{
+		Hostname:     jsii.String("${terraformRemoteHostname}"),
 		Organization: jsii.String("${organizationName}"),
 		Workspaces:   cdktf.NewNamedCloudWorkspace(jsii.String("${workspaceName}")),
 	})`);

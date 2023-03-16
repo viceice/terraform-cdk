@@ -71,7 +71,19 @@
       
     ]
   },
-  { "title": "Examples and Guides", "path": "examples" },
+  { 
+    "title": "Examples and Guides", 
+    "routes": [
+      {
+        "title": "Examples",
+        "path": "examples-and-guides/examples"
+      },
+      {
+        "title": "Refactoring Stacks",
+        "path": "examples-and-guides/refactoring"
+      }
+    ] 
+  },
   {
     "title": "Create and Deploy Applications",
     "routes": [
@@ -172,6 +184,7 @@
         "title": "Overview",
         "path": "release"
       },
+      { "title": "Upgrading to Version 0.15", "path": "release/upgrade-guide-v0-15" },
       { "title": "Upgrading to Version 0.13", "path": "release/upgrade-guide-v0-13" },
       { "title": "Upgrading to Version 0.12", "path": "release/upgrade-guide-v0-12" },
       { "title": "Upgrading to Version 0.11", "path": "release/upgrade-guide-v0-11" },

@@ -1,0 +1,43 @@
+name: Build
+on:
+  pull_request:
+    paths:
+      - packages/**
+      - package.json
+      - yarn.lock
+
+concurrency:
+  group: build-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-package:
+    runs-on: ubuntu-latest
+    container:
+      image: docker.mirror.hashicorp.services/hashicorp/jsii-terraform
+    env:
+      CHECKPOINT_DISABLE: "1"
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: "Add Git safe.directory" # Go 1.18+ started embedding repo info in the build and e.g. building @cdktf/hcl2json fails without this
+        run: git config --global --add safe.directory /__w/terraform-cdk/terraform-cdk
+      - name: Get yarn cache directory path
+        id: global-cache-dir-path
+        run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
+      - uses: actions/cache@v3
+        id: global-cache # use this to check for `cache-hit` (`steps.global-cache.outputs.cache-hit != 'true'`)
+        with:
+          path: ${{ steps.global-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+      - name: install dependencies
+        run: yarn install
+      - name: build and package
+        run: |
+          yarn build
+          yarn package
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          TF_PLUGIN_CACHE_DIR: ${{ steps.global-cache-dir-path.outputs.dir }}/terraform-plugins
+          GOCACHE: ${{ steps.global-cache-dir-path.outputs.dir }}/go-cache

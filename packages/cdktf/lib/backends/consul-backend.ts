@@ -10,7 +10,7 @@ import {
 
 // eslint-disable-next-line jsdoc/require-jsdoc
 export class ConsulBackend extends TerraformBackend {
-  constructor(scope: Construct, private readonly props: ConsulBackendProps) {
+  constructor(scope: Construct, private readonly props: ConsulBackendConfig) {
     super(scope, "backend", "consul");
   }
 
@@ -45,9 +45,9 @@ export class DataTerraformRemoteStateConsul extends TerraformRemoteState {
  * This backend supports state locking.
  *
  * Read more about this backend in the Terraform docs:
- * https://www.terraform.io/language/settings/backends/consul
+ * https://developer.hashicorp.com/terraform/language/settings/backends/consul
  */
-export interface ConsulBackendProps {
+export interface ConsulBackendConfig {
   /**
    * (Required) Path in the Consul KV store
    */
@@ -104,4 +104,4 @@ export interface ConsulBackendProps {
 
 export interface DataTerraformRemoteStateConsulConfig
   extends DataTerraformRemoteStateConfig,
-    ConsulBackendProps {}
+    ConsulBackendConfig {}

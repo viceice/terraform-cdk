@@ -14,7 +14,7 @@ import {
 export class ArtifactoryBackend extends TerraformBackend {
   constructor(
     scope: Construct,
-    private readonly props: ArtifactoryBackendProps
+    private readonly props: ArtifactoryBackendConfig
   ) {
     super(scope, "backend", "artifactory");
   }
@@ -55,11 +55,11 @@ export class DataTerraformRemoteStateArtifactory extends TerraformRemoteState {
  * This backend does not support state locking.
  *
  * Read more about this backend in the Terraform docs:
- * https://www.terraform.io/language/settings/backends/artifactory
+ * https://developer.hashicorp.com/terraform/language/v1.2.x/settings/backends/artifactory
  *
  * @deprecated CDK for Terraform no longer supports the artifactory backend. Terraform deprecated artifactory in v1.2.3 and removed it in v1.3.
  */
-export interface ArtifactoryBackendProps {
+export interface ArtifactoryBackendConfig {
   /**
    * (Required) - The username
    */
@@ -89,4 +89,4 @@ export interface ArtifactoryBackendProps {
  */
 export interface DataTerraformRemoteStateArtifactoryConfig
   extends DataTerraformRemoteStateConfig,
-    ArtifactoryBackendProps {}
+    ArtifactoryBackendConfig {}

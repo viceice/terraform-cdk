@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 // DOCS_BLOCK_START:aspect-validation
 using System.Collections.Generic;
 using Constructs;
@@ -8,7 +11,7 @@ using Amazon.JSII.Runtime;
 
 namespace Examples
 {
-    public class ValidateS3IsPrefixed: Amazon.JSII.Runtime.Deputy.DeputyBase, IAspect
+    public class ValidateS3IsPrefixed : Amazon.JSII.Runtime.Deputy.DeputyBase, IAspect
     {
         private readonly string prefix;
 
@@ -32,11 +35,13 @@ namespace Examples
     class MyAspectsValidationStack : TerraformStack
     {
         public MyAspectsValidationStack(Construct scope, string name) : base(scope, name)
-        {   
-            new AwsProvider(this, "Aws", new AwsProviderConfig {
+        {
+            new AwsProvider(this, "Aws", new AwsProviderConfig
+            {
                 Region = "us-east-1"
             });
-            S3Bucket bucket = new S3Bucket(this, "bucket", new S3BucketConfig {
+            S3Bucket bucket = new S3Bucket(this, "bucket", new S3BucketConfig
+            {
                 Bucket = "myPrefixDemo"
             });
 

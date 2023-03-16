@@ -6,7 +6,8 @@ import * as os from "os";
 import { CdktfProject, get, init } from "../../lib/index";
 import { Language } from "@cdktf/commons";
 import { SynthesizedStack } from "../../lib/synth-stack";
-import { getMultipleStacks } from "../../lib/cdktf-project";
+import { getMultipleStacks } from "../../lib/helpers/stack-helpers";
+import { LogMessage } from "../../lib/cdktf-project";
 
 function eventNames(events: any[]) {
   return events
@@ -32,7 +33,7 @@ function installFixturesInWorkingDirectory(
   return { outDir, workingDirectory };
 }
 
-jest.setTimeout(120_000);
+jest.setTimeout(300_000);
 describe("CdktfProject", () => {
   let inNewWorkingDirectory: () => {
     workingDirectory: string;
@@ -87,7 +88,7 @@ describe("CdktfProject", () => {
         outDir,
       };
     };
-  }, 100_000);
+  }, 200_000);
 
   it("should be able to create a CdktfProject", () => {
     const cdktfProject = new CdktfProject({
@@ -119,15 +120,17 @@ describe("CdktfProject", () => {
     it("diffs successfully", async () => {
       expect.assertions(2);
       const events: any[] = [];
+      const logs: LogMessage[] = [];
       const cdktfProject = new CdktfProject({
         synthCommand: "npx ts-node ./main.ts",
         ...inNewWorkingDirectory(),
         onUpdate: (event) => {
           events.push(event);
         },
+        onLog: (msg) => logs.push(msg),
       });
 
-      const plan = await cdktfProject.diff({ stackName: "first" });
+      await cdktfProject.diff({ stackName: "first" });
 
       expect(eventNames(events)).toEqual([
         "synthesizing",
@@ -135,7 +138,14 @@ describe("CdktfProject", () => {
         "planning",
         "planned",
       ]);
-      return expect(plan!.resources.length).toEqual(1);
+
+      expect(logs).toContainEqual(
+        expect.objectContaining({
+          message: expect.stringContaining(
+            "1 to add, 0 to change, 0 to destroy"
+          ),
+        })
+      );
     });
 
     it("fails if no stack specified", () => {
@@ -155,7 +165,7 @@ describe("CdktfProject", () => {
   });
 
   describe("deploy", () => {
-    it("runs synth and diff once and waits for approval", async () => {
+    it("runs synth once and waits for approval", async () => {
       const events: any[] = [];
       const cdktfProject = new CdktfProject({
         synthCommand: "npx ts-node ./main.ts",
@@ -175,14 +185,14 @@ describe("CdktfProject", () => {
         "synthesizing",
         "synthesized",
         "planning",
-        "planned",
+        "deploying",
         "waiting for approval",
         "deploying",
         "deployed",
       ]);
     });
 
-    it("runs synth and diff once and deploys on autoApprove", async () => {
+    it("runs synth once and deploys on autoApprove", async () => {
       const events: any[] = [];
       const cdktfProject = new CdktfProject({
         synthCommand: "npx ts-node ./main.ts",
@@ -206,7 +216,6 @@ describe("CdktfProject", () => {
         "synthesizing",
         "synthesized",
         "planning",
-        "planned",
         "deploying",
         "deployed",
       ]);
@@ -215,8 +224,8 @@ describe("CdktfProject", () => {
   });
 
   describe("destroy", () => {
-    it("runs synth and diff once and waits for approval", async () => {
-      const events: any[] = [];
+    it("runs synth once and waits for approval", async () => {
+      let events: any[] = [];
       const cdktfProject = new CdktfProject({
         synthCommand: "npx ts-node ./main.ts",
         ...inNewWorkingDirectory(),
@@ -229,20 +238,30 @@ describe("CdktfProject", () => {
         },
       });
 
+      // we need to deploy first to have something to destroy
+      // (else TF CLI wouldn't ask us to confirm as there's nothing)
+      await cdktfProject.deploy({ stackNames: ["second"] });
+      const lastEvent = events.pop();
+      expect(lastEvent).toHaveProperty("type", "deployed");
+      expect(lastEvent).toHaveProperty("stackName", "second");
+
+      // clear events before next invocation
+      events = [];
+
       await cdktfProject.destroy({ stackNames: ["second"], parallelism: 1 });
 
       return expect(eventNames(events)).toEqual([
         "synthesizing",
         "synthesized",
         "planning",
-        "planned",
+        "destroying",
         "waiting for approval",
         "destroying",
         "destroyed",
       ]);
     });
 
-    it("runs synth and diff once and destroys on autoApprove", async () => {
+    it("runs synth once and destroys on autoApprove", async () => {
       const events: any[] = [];
       const cdktfProject = new CdktfProject({
         synthCommand: "npx ts-node ./main.ts",
@@ -263,7 +282,6 @@ describe("CdktfProject", () => {
         "synthesizing",
         "synthesized",
         "planning",
-        "planned",
         "destroying",
         "destroyed",
       ]);
@@ -354,17 +372,17 @@ describe("CdktfProject", () => {
         "global: synthesizing",
         "global: synthesized",
         "first: planning",
-        "first: planned",
+        "first: deploying",
         "first: waiting for approval",
         "first: deploying",
         "first: deployed",
         "third: planning",
-        "third: planned",
+        "third: deploying",
         "third: waiting for approval",
         "third: deploying",
         "third: deployed",
         "second: planning",
-        "second: planned",
+        "second: deploying",
         "second: waiting for approval",
         "second: deploying",
         "second: deployed",
@@ -385,14 +403,22 @@ describe("CdktfProject", () => {
       });
 
       try {
-        await cdktfProject.deploy({
-          stackNames: ["stack1", "stack2", "stack3"],
-          parallelism: 100,
-          autoApprove: true,
-        });
+        await cdktfProject
+          .deploy({
+            stackNames: ["stack1", "stack2", "stack3"],
+            parallelism: 100,
+            autoApprove: true,
+          })
+          .catch((e) => {
+            console.log("deploy throws", e);
+            throw e;
+          });
+
         throw new Error("This error should not be thrown");
       } catch (e) {
-        expect(e).toMatchInlineSnapshot(`[Error: non-zero exit code 1]`);
+        expect(e).toMatchInlineSnapshot(
+          `"Invoking Terraform CLI failed with exit code 1"`
+        );
       }
 
       const relevantEvents = events
@@ -418,14 +444,7 @@ describe("CdktfProject", () => {
       // the middle events can occur in any order as the duration
       // they take to plan is not guaranteed
       expect(new Set(relevantEvents.slice(5, -3))).toEqual(
-        new Set([
-          "stack1: planned",
-          "stack1: deploying",
-          "stack2: planned",
-          "stack2: deploying",
-          "stack3: planned",
-          "stack3: deploying",
-        ])
+        new Set(["stack1: deploying", "stack2: deploying", "stack3: deploying"])
       );
     }, 120_000);
 
@@ -454,15 +473,12 @@ describe("CdktfProject", () => {
         "global: synthesizing",
         "global: synthesized",
         "first: planning",
-        "first: planned",
         "first: deploying",
         "first: deployed",
         "third: planning",
-        "third: planned",
         "third: deploying",
         "third: deployed",
         "second: planning",
-        "second: planned",
         "second: deploying",
         "second: deployed",
       ]);
@@ -500,21 +516,21 @@ describe("CdktfProject", () => {
         "global: synthesizing",
         "global: synthesized",
         "first: planning",
-        "first: planned",
+        "first: deploying",
         "first: waiting for approval",
         "first: deploying",
         "first: deployed",
         "third: planning",
-        "third: planned",
+        "third: deploying",
         "third: waiting for approval",
         "third: dismissed",
         "second: planning",
-        "second: planned",
+        "second: deploying",
         "second: waiting for approval",
         "second: deploying",
         "second: deployed",
         "fourth: planning",
-        "fourth: planned",
+        "fourth: deploying",
         "fourth: waiting for approval",
         "fourth: deploying",
         "fourth: deployed",
@@ -557,30 +573,25 @@ describe("CdktfProject", () => {
         "global: synthesizing",
         "global: synthesized",
         "second: planning",
-        "second: planned",
         "second: destroying",
         "second: destroyed",
         "fifth: planning",
-        "fifth: planned",
         "fifth: destroying",
         "fifth: destroyed",
         "third: planning",
-        "third: planned",
         "third: destroying",
         "third: destroyed",
         "fourth: planning",
-        "fourth: planned",
         "fourth: destroying",
         "fourth: destroyed",
         "first: planning",
-        "first: planned",
         "first: destroying",
         "first: destroyed",
       ]);
     });
 
     it("only aborts dependant when destroying", async () => {
-      const events: any[] = [];
+      let events: any[] = [];
       const cdktfProject = new CdktfProject({
         synthCommand: "npx ts-node ./main.ts",
         ...inNewWorkingDirectory(),
@@ -597,16 +608,17 @@ describe("CdktfProject", () => {
         },
       });
 
-      // To destroy sth we need to deploy first, with a different project to not polute the event list
-      new CdktfProject({
-        synthCommand: "npx ts-node ./main.ts",
-        ...inNewWorkingDirectory(),
-        onUpdate: () => {}, // eslint-disable-line @typescript-eslint/no-empty-function
-      }).deploy({
+      // To destroy sth we need to deploy first, using the same project (= same working directory)
+      await cdktfProject.deploy({
         stackNames: ["third", "first", "second", "fourth", "fifth"],
         autoApprove: true,
         parallelism: 1,
       });
+      const lastEvent = events.pop();
+      expect(lastEvent).toHaveProperty("type", "deployed");
+      expect(lastEvent).toHaveProperty("stackName", "fifth");
+
+      events = []; // clear events
 
       // Random order to implicitly test out sorting
       await cdktfProject.destroy({
@@ -622,21 +634,21 @@ describe("CdktfProject", () => {
         "global: synthesizing",
         "global: synthesized",
         "second: planning",
-        "second: planned",
+        "second: destroying",
         "second: waiting for approval",
         "second: destroying",
         "second: destroyed",
         "fifth: planning",
-        "fifth: planned",
+        "fifth: destroying",
         "fifth: waiting for approval",
         "fifth: destroying",
         "fifth: destroyed",
         "third: planning",
-        "third: planned",
+        "third: destroying",
         "third: waiting for approval",
         "third: dismissed",
         "fourth: planning",
-        "fourth: planned",
+        "fourth: destroying",
         "fourth: waiting for approval",
         "fourth: destroying",
         "fourth: destroyed",

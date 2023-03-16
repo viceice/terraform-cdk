@@ -8,7 +8,7 @@ description: >-
 
 Resources are the most important element when defining infrastructure in CDKTF applications. Each resource describes one or more infrastructure objects, such as virtual networks, compute instances, or higher-level components such as DNS records.
 
-In your CDK for Terraform (CDKTF) application, you will use your preferred programming language to define the resources you want Terraform to manage on one or more [providers](/cdktf/concepts/providers). This page explains how to use resources in your application and how to use [escape hatches](#escape-hatch) to change resource behavior when necessary.
+In your CDK for Terraform (CDKTF) application, you will use your preferred programming language to define the resources you want Terraform to manage on one or more [providers](/terraform/cdktf/concepts/providers). This page explains how to use resources in your application and how to use [escape hatches](#escape-hatch) to change resource behavior when necessary.
 
 ## Define Resources
 
@@ -16,14 +16,16 @@ Resource definitions and properties vary depending on the type of resource and t
 
 The following example defines a [DynamoDB table](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/dynamodb_table) resource on the AWS provider.
 
+<!-- #NEXT_CODE_BLOCK_SOURCE:ts examples/typescript/documentation#resources-define -->
 <!-- #NEXT_CODE_BLOCK_SOURCE:python examples/python/documentation#resources-define -->
-
 <!-- #NEXT_CODE_BLOCK_SOURCE:java examples/java/documentation#resources-define -->
+<!-- #NEXT_CODE_BLOCK_SOURCE:csharp examples/csharp/documentation#resources-define -->
+<!-- #NEXT_CODE_BLOCK_SOURCE:go examples/go/documentation#resources-define -->
 
 <CodeTabs>
 
-```typescript
-export class HelloTerra extends TerraformStack {
+```ts
+export class ResourcesStack extends TerraformStack {
   constructor(scope: Construct, id: string) {
     super(scope, id);
 
@@ -33,7 +35,7 @@ export class HelloTerra extends TerraformStack {
 
     const region = new DataAwsRegion(this, "region");
 
-    new DynamodbTable(this, "Hello", {
+    new DynamodbTable(this, "first-table", {
       name: `my-first-table-${region.name}`,
       hashKey: "temp",
       attribute: [{ name: "id", type: "S" }],
@@ -104,15 +106,69 @@ class ResourceStack(TerraformStack):
         )
 ```
 
+```csharp
+            DataAwsRegion region = new DataAwsRegion(this, "region");
+
+            new DynamodbTable(this, "first-table", new DynamodbTableConfig
+            {
+                Name = $"my-first-table-{region.Name}",
+                HashKey = "temp",
+                Attribute = new DynamodbTableAttribute[] {
+                    new DynamodbTableAttribute {
+                        Name = "id",
+                        Type = "S"
+                    }
+                },
+                BillingMode = "PAY_PER_REQUEST"
+            });
+```
+
+```go
+import (
+	"fmt"
+
+	"github.com/aws/constructs-go/constructs/v10"
+	"github.com/aws/jsii-runtime-go"
+	"github.com/hashicorp/terraform-cdk-go/cdktf"
+	"github.com/hashicorp/terraform-cdk/examples/go/documentation/generated/hashicorp/aws/dataawsregion"
+	"github.com/hashicorp/terraform-cdk/examples/go/documentation/generated/hashicorp/aws/dynamodbtable"
+	aws "github.com/hashicorp/terraform-cdk/examples/go/documentation/generated/hashicorp/aws/provider"
+
+)
+
+func NewResourcesStack(scope constructs.Construct, name string) cdktf.TerraformStack {
+	stack := cdktf.NewTerraformStack(scope, &name)
+
+	aws.NewAwsProvider(stack, jsii.String("aws"), &aws.AwsProviderConfig{
+		Region: jsii.String("eu-central-1"),
+	})
+
+	region := dataawsregion.NewDataAwsRegion(stack, jsii.String("region"), &dataawsregion.DataAwsRegionConfig{})
+
+	dynamodbtable.NewDynamodbTable(stack, jsii.String("first-table"), &dynamodbtable.DynamodbTableConfig{
+		Name:    jsii.String(fmt.Sprintf("my-first-table-%s", *region.Name())),
+		HashKey: jsii.String("id"),
+		Attribute: []map[string]string{
+			{"name": "id", "type": "S"},
+		},
+		BillingMode: jsii.String("PAY_PER_REQUEST"),
+	})
+
+
+	return stack
+}
+
+```
+
 </CodeTabs>
 
-The [examples page](/cdktf/examples) contains multiple example projects for every supported programming language.
+The [examples page](/terraform/cdktf/examples-and-guides/examples) contains multiple example projects for every supported programming language.
 
 ## Scope
 
 You can instantiate the same resource multiple times throughout your infrastructure. For example, you may want to create multiple S3 Buckets with different configurations. Instances that share the same parent element are considered to be part of the same scope. You must set a different `name` property for each instance to avoid naming conflicts.
 
-Refer to the [constructs documentation](/cdktf/concepts/constructs#scope) for more details and an example.
+Refer to the [constructs documentation](/terraform/cdktf/concepts/constructs#scope) for more details and an example.
 
 ## References
 
@@ -122,9 +178,11 @@ To create references, call `myResource.<propertyName>` on the resource instance.
 
 References are also useful when you need to track logical dependencies. For example, Kubernetes resources live in a namespace, so a namespace must exist before Terraform can provision the associated resources. The following example uses a reference for the namespace property in the the deployment. This reference tells Terraform that it needs to create the namespace before creating the resources.
 
+<!-- #NEXT_CODE_BLOCK_SOURCE:ts examples/typescript/documentation#resources-references -->
 <!-- #NEXT_CODE_BLOCK_SOURCE:python examples/python/documentation#resources-references -->
-
 <!-- #NEXT_CODE_BLOCK_SOURCE:java examples/java/documentation#resources-references -->
+<!-- #NEXT_CODE_BLOCK_SOURCE:csharp examples/csharp/documentation#resources-references -->
+<!-- #NEXT_CODE_BLOCK_SOURCE:go examples/go/documentation#resources-references -->
 
 <CodeTabs>
 
@@ -140,9 +198,13 @@ new Deployment(this, "nginx-deployment", {
     name: "nginx",
     namespace: exampleNamespace.metadata.name, // Reference the namespace name propery
     labels: {
-      app,
+      app: "my-app",
     },
-  });
+  },
+  spec: {
+    // ...
+  },
+});
 ```
 
 ```java
@@ -158,7 +220,7 @@ import imports.kubernetes.namespace.NamespaceMetadata;
                 new Deployment(this, "nginx-deployment", DeploymentConfig.builder()
                                 .metadata(DeploymentMetadata.builder()
                                                 .name("nginx")
-                                                .namespace(exampleNamespace.getMetadata().getName())
+                                                .namespace(exampleNamespace.getMetadata().getName()) // Reference the name property
                                                 .labels(new HashMap<String, String>() {
                                                         {
                                                                 put("app", app.toString());
@@ -205,7 +267,7 @@ import imports.kubernetes.namespace.NamespaceMetadata;
         Deployment(self, "nginx-deployment",
             metadata=DeploymentMetadata(
                 name="nginx",
-                namespace=exampleNamespace.metadata.name,
+                namespace=exampleNamespace.metadata.name, # Reference the name property
                 labels={"app": app}
             ),
             spec=DeploymentSpec(
@@ -228,30 +290,110 @@ import imports.kubernetes.namespace.NamespaceMetadata;
         )
 ```
 
+```csharp
+            Namespace exampleNamespace = new Namespace(this, "tf-cdk-example", new NamespaceConfig
+            {
+                Metadata = new NamespaceMetadata
+                {
+                    Name = "tf-cdk-example"
+                }
+            });
+
+            new Deployment(this, "nginx-deployment", new DeploymentConfig
+            {
+                Metadata = new DeploymentMetadata
+                {
+                    Name = "nginx",
+                    Namespace = exampleNamespace.Metadata.Name, // Reference the name property
+                    Labels = new Dictionary<string, string> {
+                        { "app", "my-app" }
+                    }
+                },
+                Spec = new DeploymentSpec
+                {
+                    Template = new DeploymentSpecTemplate
+                    {
+                        Metadata = new DeploymentSpecTemplateMetadata
+                        {
+                            Labels = new Dictionary<string, string> {
+                                { "app", "my-app" }
+                            }
+                        },
+                        Spec = new DeploymentSpecTemplateSpec
+                        {
+                            Container = new DeploymentSpecTemplateSpecContainer[] {
+                                new DeploymentSpecTemplateSpecContainer {
+                                    Name = "nginx",
+                                    Image = "nginx:1.7.9"
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+```
+
+```go
+	exampleNamespace := namespace.NewNamespace(stack, jsii.String("tf-cdk-example"), &namespace.NamespaceConfig{
+		Metadata: &namespace.NamespaceMetadata{
+			Name: jsii.String("tf-cdk-example"),
+		},
+	})
+
+	deployment.NewDeployment(stack, jsii.String("nginx-deployment"), &deployment.DeploymentConfig{
+		Metadata: &deployment.DeploymentMetadata{
+			Name:      jsii.String("nginx"),
+			Namespace: exampleNamespace.Metadata().Name(), // Reference the name property
+			Labels: &map[string]*string{
+				"app": jsii.String("my-app"),
+			},
+		},
+		Spec: &deployment.DeploymentSpec{
+			Template: &deployment.DeploymentSpecTemplate{
+				Metadata: &deployment.DeploymentSpecTemplateMetadata{
+					Labels: &map[string]*string{
+						"app": jsii.String("my-app"),
+					},
+				},
+				Spec: &deployment.DeploymentSpecTemplateSpec{
+					Container: []deployment.DeploymentSpecTemplateSpecContainer{
+						{
+							Name:  jsii.String("nginx"),
+							Image: jsii.String("nginx:1.7.9"),
+						},
+					},
+				},
+			},
+		},
+	})
+```
+
 </CodeTabs>
 
 ## Provisioners
 
-Provisioners can be used to model specific actions on the local machine or on a remote machine in order to prepare servers or other infrastructure objects for service. You can find more information on the concept of provisioners in the [Terraform docs](/language/resources/provisioners/syntax). You can pass the `provisioners` key to define a list of provisioners, connections can be configured with the `connection` key. A working example can be found at [examples/typescript/provisioner](https://github.com/hashicorp/terraform-cdk/blob/main/examples/typescript/provisioner/main.ts).
+Provisioners can be used to model specific actions on the local machine or on a remote machine in order to prepare servers or other infrastructure objects for service. You can find more information on the concept of provisioners in the [Terraform docs](/terraform/language/resources/provisioners/syntax). You can pass the `provisioners` key to define a list of provisioners, connections can be configured with the `connection` key. A working example can be found at [examples/typescript/provisioner](https://github.com/hashicorp/terraform-cdk/blob/main/examples/typescript/provisioner/main.ts).
 
-If you need to use the special [`self` object](/language/resources/provisioners/syntax#the-self-object) that can only be used in `provisioner` and `connection` blocks to refer to the parent resource you can use the `TerraformSelf` class like this: `TerraformSelf.getString("public_ip")`.
+If you need to use the special [`self` object](/terraform/language/resources/provisioners/syntax#the-self-object) that can only be used in `provisioner` and `connection` blocks to refer to the parent resource you can use the `TerraformSelf` class like this: `TerraformSelf.getString("public_ip")`.
 
 ## Escape Hatch
 
-Terraform provides [meta-arguments](/language/resources/syntax#meta-arguments) to change resource behavior. For example, the `for_each` meta-argument creates multiple resource instances according to a map, or set of strings. The escape hatch allows you to use these meta-arguments to your CDKTF application and to override attributes that CDKTF cannot yet fully express.
+Terraform provides [meta-arguments](/terraform/language/resources/syntax#meta-arguments) to change resource behavior. For example, the `for_each` meta-argument creates multiple resource instances according to a map, or set of strings. The escape hatch allows you to use these meta-arguments to your CDKTF application and to override attributes that CDKTF cannot yet fully express.
 
 The following example defines a provisioner for a resource using the `addOverride` method.
 
+<!-- #NEXT_CODE_BLOCK_SOURCE:ts examples/typescript/documentation#resources-escape-hatch -->
 <!-- #NEXT_CODE_BLOCK_SOURCE:python examples/python/documentation#resources-escape-hatch -->
-
 <!-- #NEXT_CODE_BLOCK_SOURCE:java examples/java/documentation#resources-escape-hatch -->
+<!-- #NEXT_CODE_BLOCK_SOURCE:csharp examples/csharp/documentation#resources-escape-hatch -->
+<!-- #NEXT_CODE_BLOCK_SOURCE:go examples/go/documentation#resources-escape-hatch -->
 
 <CodeTabs>
 
-```typescript
-const tableName = "my-table";
+```ts
+const tableName = "my-second-table";
 
-const table = new DynamodbTable(this, "Hello", {
+const table = new DynamodbTable(this, "second-table", {
   name: tableName,
   hashKey: "id",
   attribute: [{ name: "id", type: "S" }],
@@ -317,9 +459,53 @@ import imports.aws.dynamodb_table.DynamodbTableConfig;
         ])
 ```
 
+```csharp
+            String tableName = "my-second-table";
+            DynamodbTable table = new DynamodbTable(this, "second-table", new DynamodbTableConfig
+            {
+                Name = tableName,
+                HashKey = "id",
+                Attribute = new DynamodbTableAttribute[] {
+                    new DynamodbTableAttribute {
+                        Name = "id",
+                        Type = "S"
+                    }
+                }
+            });
+
+            table.AddOverride("provisioner", new Dictionary<string, object>[] {
+                new Dictionary<string, object> {
+                    { "local-exec", new Dictionary<string, string> {
+                        { "command", $"aws dynamodb create-backup --table-name {tableName} --backup-name {tableName}-backup" }
+                    } }
+                }
+            });
+
+```
+
+```go
+tableName := "my-second-table"
+table := dynamodbtable.NewDynamodbTable(stack, jsii.String("second-table"), &dynamodbtable.DynamodbTableConfig{
+	Name:    &tableName,
+	HashKey: jsii.String("id"),
+	Attribute: []map[string]string{
+		{"name": "id", "type": "S"},
+	},
+})
+table.AddOverride(jsii.String("provisioner"), []map[string]map[string]string{
+	{"local-exec": {
+		"command": fmt.Sprintf(
+			"aws dynamodb create-backup --table-name %s --backup-name %s-backup",
+			tableName,
+			tableName,
+		),
+	}},
+})
+```
+
 </CodeTabs>
 
-When you run `cdktf synth`, CDKTF generates a Terraform configuration with the [provisioner added to the JSON object](/language/syntax/json#nested-block-mapping).
+When you run `cdktf synth`, CDKTF generates a Terraform configuration with the [provisioner added to the JSON object](/terraform/language/syntax/json#nested-block-mapping).
 
 ```json
 {
@@ -349,12 +535,15 @@ When you run `cdktf synth`, CDKTF generates a Terraform configuration with the [
 
 To override an attribute, include the resource attribute key in `addOverride`. The attribute in the escape hatch is in snake case because the Terraform JSON configuration uses snake case instead of camel case.
 
-<!-- #NEXT_CODE_BLOCK_SOURCE:java examples/java/documentation#resources-override-attribute -->
+<!-- #NEXT_CODE_BLOCK_SOURCE:ts examples/typescript/documentation#resources-override-attribute -->
 <!-- #NEXT_CODE_BLOCK_SOURCE:python examples/python/documentation#resources-override-attribute -->
+<!-- #NEXT_CODE_BLOCK_SOURCE:java examples/java/documentation#resources-override-attribute -->
+<!-- #NEXT_CODE_BLOCK_SOURCE:csharp examples/csharp/documentation#resources-override-attribute -->
+<!-- #NEXT_CODE_BLOCK_SOURCE:go examples/go/documentation#resources-override-attribute -->
 
 <CodeTabs>
 
-```typescript
+```ts
 const topic = new SnsTopic(this, "Topic", {
   displayName: "will-be-overwritten",
 });
@@ -374,6 +563,21 @@ new SnsTopic(this, "Topic", SnsTopicConfig.builder()
                 )
 
         topic.add_override("display_name", "my-topic")
+```
+
+```csharp
+SnsTopic topic = new SnsTopic(this, "Topic", new SnsTopicConfig
+{
+    DisplayName = "will-be-overwritten"
+});
+topic.AddOverride("display_name", "my-topic");
+```
+
+```go
+topic := snstopic.NewSnsTopic(stack, jsii.String("Topic"), &snstopic.SnsTopicConfig{
+	DisplayName: jsii.String("will-be-overwritten"),
+})
+topic.AddOverride(jsii.String("display_name"), jsii.String("my-topic"))
 ```
 
 </CodeTabs>
@@ -396,7 +600,7 @@ Use a dot notation to access elements in arrays: `resource.addOverride("configur
 
 ### Escape Hatch for Dynamic Blocks
 
-Terraform configurations sometimes use [`dynamic` blocks](/language/expressions/dynamic-blocks) to create related resources based on dynamic data, or data that is only known after Terraform provisions the infrastructure. For example, you could create a series of nested blocks for a series of Virtual Private Cloud (VPC) ingress ports. A `dynamic` block loops over a complex value and generates a nested resource block for each element of that complex value.
+Terraform configurations sometimes use [`dynamic` blocks](/terraform/language/expressions/dynamic-blocks) to create related resources based on dynamic data, or data that is only known after Terraform provisions the infrastructure. For example, you could create a series of nested blocks for a series of Virtual Private Cloud (VPC) ingress ports. A `dynamic` block loops over a complex value and generates a nested resource block for each element of that complex value.
 
 In CDKTF applications, you must use an escape hatch when you want to loop through a dynamic value like a `TerraformVariable` or a resource output.
 
@@ -408,18 +612,21 @@ To use an escape hatch to loop over dynamic data, you must:
 
 The following example adds ingress values by looping through the ports passed as `TerraformVariable`.
 
+<!-- #NEXT_CODE_BLOCK_SOURCE:ts examples/typescript/documentation#resources-escape-hatch-dynamic-block -->
 <!-- #NEXT_CODE_BLOCK_SOURCE:python examples/python/documentation#resources-escape-hatch-dynamic-block -->
 <!-- #NEXT_CODE_BLOCK_SOURCE:java examples/java/documentation#resources-escape-hatch-dynamic-block -->
+<!-- #NEXT_CODE_BLOCK_SOURCE:csharp examples/csharp/documentation#resources-escape-hatch-dynamic-block -->
+<!-- #NEXT_CODE_BLOCK_SOURCE:go examples/go/documentation#resources-escape-hatch-dynamic-block -->
 
 <CodeTabs>
 
-```typescript
-const ports = new TerraformVariable(this, "ports", {
+```ts
+const portsList = new TerraformVariable(this, "ports", {
   type: "list",
   default: [22, 80, 443, 5432],
 });
 
-const sg = new SecurityGroup(this, "sec1grp", {
+const sg = new SecurityGroup(this, "security1", {
   name: "security1",
   vpcId: "vpcs",
   egress: [
@@ -432,11 +639,11 @@ const sg = new SecurityGroup(this, "sec1grp", {
   ],
 });
 sg.addOverride("dynamic.ingress", {
-  for_each: ports.listValue,
+  for_each: portsList.listValue,
   content: {
-    fromPort: "${ingress.value}",
-    toPort: "${ingress.value}",
-    cidrBlocks: ["0.0.0.0/0"],
+    from_port: "${ingress.value}",
+    to_port: "${ingress.value}",
+    cidr_blocks: ["0.0.0.0/0"],
     protocol: "-1",
   },
 });
@@ -468,10 +675,10 @@ import imports.aws.security_group.*;
                                 put("for_each", ports.getListValue());
                                 put("content", new HashMap<String, Object>() {
                                         {
-                                                put("fromPort", "${ingress.value}");
-                                                put("toPort", "${ingress.value}");
-                                                put("cidrBlocks", Arrays.asList("0.0.0.0/0"));
-                                                put("protocal", "-1");
+                                                put("from_port", "${ingress.value}");
+                                                put("to_port", "${ingress.value}");
+                                                put("cidr_blocks", Arrays.asList("0.0.0.0/0"));
+                                                put("protocol", "-1");
                                         }
                                 });
                         }
@@ -490,9 +697,9 @@ import imports.aws.security_group.*;
                 vpc_id="vpcs",
                 egress=[
                     {
-                        "fromPort": 0,
-                        "toPort": 0,
-                        "ciderBlocks": ["0.0.0.0/0"],
+                        "from_port": 0,
+                        "to_port": 0,
+                        "cidr_blocks": ["0.0.0.0/0"],
                         "protocol": "-1"
                     }
                 ]
@@ -501,12 +708,69 @@ import imports.aws.security_group.*;
         sq.add_override("dynamic.ingress", {
             "for_each": ports.list_value,
             "content": {
-                "fromPort": "${ingress.value}",
-                "toPort": "${ingress.value}",
-                "ciderBlocks": ["0.0.0.0/0"],
+                "from_port": "${ingress.value}",
+                "to_port": "${ingress.value}",
+                "cidr_blocks": ["0.0.0.0/0"],
                 "protocol": "-1"
             }
         })
+```
+
+```csharp
+TerraformVariable portsList = new TerraformVariable(this, "ports", new TerraformVariableConfig
+{
+    Type = "list",
+});
+SecurityGroup sg = new SecurityGroup(this, "security1", new SecurityGroupConfig
+{
+    Name = "security1",
+    VpcId = "vpcs",
+    Egress = new SecurityGroupEgress[] {
+        new SecurityGroupEgress {
+            FromPort = 0,
+            ToPort = 0,
+            CidrBlocks = new string[] { "0.0.0.0/0" },
+            Protocol = "-1"
+        }
+    }
+});
+sg.AddOverride("dynamic.ingress", new Dictionary<string, object> {
+    { "for_each", portsList.ListValue },
+    { "content", new Dictionary<string, object> {
+        { "from_port", "${ingress.value}" },
+        { "to_port", "${ingress.value}" },
+        { "cidr_blocks", new string[] { "0.0.0.0/0" } },
+        { "protocol", "-1" }
+    }}
+});
+```
+
+```go
+portsList := cdktf.NewTerraformVariable(stack, jsii.String("ports"), &cdktf.TerraformVariableConfig{
+	Type:    jsii.String("list"),
+	Default: []int{22, 80, 443, 5432},
+})
+sg := securitygroup.NewSecurityGroup(stack, jsii.String("security1"), &securitygroup.SecurityGroupConfig{
+	Name:  jsii.String("security1"),
+	VpcId: jsii.String("vpcs"),
+	Egress: &[]securitygroup.SecurityGroupEgress{
+		{
+			FromPort:   jsii.Number(0),
+			ToPort:     jsii.Number(0),
+			CidrBlocks: &[]*string{jsii.String("0.0.0.0/0")},
+			Protocol:   jsii.String("-1"),
+		},
+	},
+})
+sg.AddOverride(jsii.String("dynamic.ingress"), &map[string]interface{}{
+	"for_each": portsList.ListValue(),
+	"content": &map[string]interface{}{
+		"from_port":   "${ingress.value}",
+		"to_port":     "${ingress.value}",
+		"cidr_blocks": []string{"0.0.0.0/0"},
+		"protocol":    "-1",
+	},
+})
 ```
 
 </CodeTabs>
@@ -515,17 +779,19 @@ You should only use escape hatches when you need to work with dynamic values tha
 
 The following example loops through the ports without using an escape hatch.
 
+<!-- #NEXT_CODE_BLOCK_SOURCE:ts examples/typescript/documentation#resources-escape-loop-thru-ports -->
 <!-- #NEXT_CODE_BLOCK_SOURCE:python examples/python/documentation#resources-escape-loop-thru-ports -->
-
 <!-- #NEXT_CODE_BLOCK_SOURCE:java examples/java/documentation#resources-escape-loop-thru-ports -->
+<!-- #NEXT_CODE_BLOCK_SOURCE:csharp examples/csharp/documentation#resources-escape-loop-thru-ports -->
+<!-- #NEXT_CODE_BLOCK_SOURCE:go examples/go/documentation#resources-escape-loop-thru-ports -->
 
 <CodeTabs>
 
 ```ts
 const ports = [22, 80, 443, 5432];
 
-new SecurityGroup(this, "sec1grp", {
-  name: "security1",
+new SecurityGroup(this, "security2", {
+  name: "security2",
   vpcId: "vpcs",
   egress: [
     {
@@ -592,6 +858,57 @@ new SecurityGroup(this, "sec1grp", {
                 ) for port in ports
             ]
         )
+```
+
+```csharp
+int[] ports = new int[] { 22, 80, 443, 5432 };
+new SecurityGroup(this, "security2", new SecurityGroupConfig
+{
+    Name = "security2",
+    VpcId = "vpcs",
+    Egress = new SecurityGroupEgress[] {
+        new SecurityGroupEgress {
+            FromPort = 0,
+            ToPort = 0,
+            CidrBlocks = new string[] { "0.0.0.0/0" },
+            Protocol = "-1"
+        }
+    },
+    Ingress = ports.Select(port => new SecurityGroupIngress
+    {
+        FromPort = port,
+        ToPort = port,
+        CidrBlocks = new string[] { "0.0.0.0/0" },
+        Protocol = "-1"
+    }).ToArray()
+});
+```
+
+```go
+	ports := []float64{22, 80, 443, 5432}
+	ingress := make([]securitygroup.SecurityGroupIngress, 0)
+	for _, port := range ports {
+		ingress = append(ingress, securitygroup.SecurityGroupIngress{
+			FromPort:   jsii.Number(port),
+			ToPort:     jsii.Number(port),
+			CidrBlocks: &[]*string{jsii.String("0.0.0.0/0")},
+			Protocol:   jsii.String("-1"),
+		})
+	}
+
+	securitygroup.NewSecurityGroup(stack, jsii.String("security2"), &securitygroup.SecurityGroupConfig{
+		Name:  jsii.String("security2"),
+		VpcId: jsii.String("vpcs"),
+		Egress: &[]securitygroup.SecurityGroupEgress{
+			{
+				FromPort:   jsii.Number(0),
+				ToPort:     jsii.Number(0),
+				CidrBlocks: &[]*string{jsii.String("0.0.0.0/0")},
+				Protocol:   jsii.String("-1"),
+			},
+		},
+		Ingress: &ingress,
+	})
 ```
 
 </CodeTabs>

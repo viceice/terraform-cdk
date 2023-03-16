@@ -7,9 +7,9 @@ description: >-
 
 # Providers
 
-A [provider](/language/providers) is a plugin that lets Terraform manage an external API. In your CDK for Terraform (CDKTF) application, you use your preferred programming language to define the [resources](/cdktf/concepts/resources) you want Terraform to manage on one or more providers.
+A [provider](/terraform/language/providers) is a plugin that lets Terraform manage an external API. In your CDK for Terraform (CDKTF) application, you use your preferred programming language to define the [resources](/terraform/cdktf/concepts/resources) you want Terraform to manage on one or more providers.
 
-You can install pre-built providers packaged with the required code bindings for your language or add providers to the [`cdktf.json`](/cdktf/create-and-deploy/configuration-file) file and generate code bindings manually. To use providers in your application, you can import them from the Terraform Registry or from your local machine.
+You can install pre-built providers packaged with the required code bindings for your language or add providers to the [`cdktf.json`](/terraform/cdktf/create-and-deploy/configuration-file) file and generate code bindings manually. To use providers in your application, you can import them from the Terraform Registry or from your local machine.
 
 ## What Are Providers?
 
@@ -17,7 +17,7 @@ Provider plugins like the [AWS provider](https://registry.terraform.io/providers
 
 ![diagram: How Terraform uses plugins](images/terraform-plugin-overview.png)
 
-Terraform uses providers to provision [resources](/language/resources), which describe one or more infrastructure objects like virtual networks and compute instances. Each provider on the [Terraform Registry](https://registry.terraform.io/) has documentation detailing available resources and their configuration options.
+Terraform uses providers to provision [resources](/terraform/language/resources), which describe one or more infrastructure objects like virtual networks and compute instances. Each provider on the [Terraform Registry](https://registry.terraform.io/) has documentation detailing available resources and their configuration options.
 
 ## Install Pre-Built Providers
 
@@ -41,26 +41,29 @@ When you use `npm install` to install a pre-built provider, you should not defin
 
 ## Add Providers with CLI
 
-Use the [`provider add` command](/cdktf/cli-reference/commands#provider-add) to automatically install a pre-built provider if available. If a pre-built provider is not available, CDKTF uses local provider bindings.
+Use the [`provider add` command](/terraform/cdktf/cli-reference/commands#provider-add) to automatically install a pre-built provider if available. If a pre-built provider is not available, CDKTF uses local provider bindings.
 
 ## Import Providers
 
-CDK for Terraform lets you import Terraform [providers](/language/providers) to your project.
+CDK for Terraform lets you import Terraform [providers](/terraform/language/providers) to your project.
 
 This TypeScript example project has a `main.ts` file that defines AWS resources.
 
+<!-- #NEXT_CODE_BLOCK_SOURCE:ts examples/typescript/documentation#providers-import -->
 <!-- #NEXT_CODE_BLOCK_SOURCE:java examples/java/documentation#providers-import-providers -->
 <!-- #NEXT_CODE_BLOCK_SOURCE:python examples/python/documentation#providers-import-providers -->
+<!-- #NEXT_CODE_BLOCK_SOURCE:csharp examples/csharp/documentation#providers-import-providers -->
+<!-- #NEXT_CODE_BLOCK_SOURCE:go examples/go/documentation#providers-import-providers -->
 
 <CodeTabs>
 
-```typescript
+```ts
 import { Construct } from "constructs";
-import { App, TerraformStack } from "cdktf";
-import { AwsProvider } from "./.gen/providers/aws/provider";
-import { Instance } from "./.gen/providers/aws/instance";
+import { TerraformStack, TerraformVariable, Token } from "cdktf";
+import { AwsProvider } from "@cdktf/provider-aws/lib/aws-provider";
+import { Instance } from "@cdktf/provider-aws/lib/instance";
 
-class MyStack extends TerraformStack {
+export class ProvidersStack extends TerraformStack {
   constructor(scope: Construct, id: string) {
     super(scope, id);
 
@@ -68,16 +71,12 @@ class MyStack extends TerraformStack {
       region: "us-east-1",
     });
 
-    new Instance(this, "Hello", {
+    const instance = new Instance(this, "Hello", {
       ami: "ami-2757f631",
       instanceType: "t2.micro",
     });
   }
 }
-
-const app = new App();
-new MyStack(app, "hello-terraform");
-app.synth();
 ```
 
 ```java
@@ -138,11 +137,73 @@ SimpleProviderStack(app, "provider-stack")
 app.synth()
 ```
 
+```csharp
+using System;
+using System.IO;
+using System.Collections.Generic;
+using System.Linq;
+using Constructs;
+using HashiCorp.Cdktf;
+using aws.Provider;
+using aws.Instance;
+
+namespace Examples
+{
+    class ProviderStack : TerraformStack
+    {
+        public ProviderStack(Construct scope, string name) : base(scope, name)
+        {
+            // Add this to your project's .csproj file:
+            // <ItemGroup>
+            //     <ProjectReference Include=".gen\aws\aws.csproj" />
+            // </ItemGroup>
+
+            new AwsProvider(this, "aws", new AwsProviderConfig
+            {
+                Region = "eu-central-1"
+            });
+
+            new Instance(this, "instance", new InstanceConfig
+            {
+                Ami = "ami-2757f631",
+                InstanceType = "t2.micro"
+            });
+        }
+    }
+}
+```
+
+```go
+import (
+	"github.com/aws/constructs-go/constructs/v10"
+	"github.com/aws/jsii-runtime-go"
+	"github.com/hashicorp/terraform-cdk-go/cdktf"
+
+	"github.com/hashicorp/terraform-cdk/examples/go/documentation/generated/hashicorp/aws/instance"
+	aws "github.com/hashicorp/terraform-cdk/examples/go/documentation/generated/hashicorp/aws/provider"
+)
+
+func NewProvidersStack(scope constructs.Construct, name string) cdktf.TerraformStack {
+	stack := cdktf.NewTerraformStack(scope, &name)
+
+	aws.NewAwsProvider(stack, jsii.String("aws"), &aws.AwsProviderConfig{
+		Region: jsii.String(("us-east-1")),
+	})
+
+	instance := instance.NewInstance(stack, jsii.String("hello"), &instance.InstanceConfig{
+		Ami:          jsii.String("ami-2757f631"),
+		InstanceType: jsii.String("t2.micro"),
+	})
+	return stack
+}
+
+```
+
 </CodeTabs>
 
 ### Add Provider to `cdktf.json`
 
-To use a new provider, first add it to the `"terraformProviders"` array in the [`cdktf.json` file](/cdktf/create-and-deploy/configuration-file).
+To use a new provider, first add it to the `"terraformProviders"` array in the [`cdktf.json` file](/terraform/cdktf/create-and-deploy/configuration-file).
 
 The following example adds the [DNS Simple](https://registry.terraform.io/providers/dnsimple/dnsimple/latest/docs) provider.
 
@@ -171,21 +232,23 @@ Generated typescript constructs in the output directory: .gen
 
 Import and use the generated classes in your application. The following example imports the `DnsimpleProvider` and `Record` resources from `./.gen/providers/dnsimple` and defines them.
 
+<!-- #NEXT_CODE_BLOCK_SOURCE:ts examples/typescript/documentation#providers-import-classes -->
 <!-- #NEXT_CODE_BLOCK_SOURCE:python examples/python/documentation#providers-import-classes -->
-
 <!-- #NEXT_CODE_BLOCK_SOURCE:java examples/java/documentation#providers-import-classes -->
+<!-- #NEXT_CODE_BLOCK_SOURCE:csharp examples/csharp/documentation#providers-import-classes -->
+<!-- #NEXT_CODE_BLOCK_SOURCE:go examples/go/documentation#providers-import-classes -->
 
 <CodeTabs>
 
-```typescript
+```ts
 import { Construct } from "constructs";
-import { App, TerraformStack, Token } from "cdktf";
-import { AwsProvider } from "./.gen/providers/aws/provider";
-import { Instance } from "./.gen/providers/aws/instance";
-import { DnsimpleProvider } from "./.gen/providers/dnsimple/provider";
-import { Record } from "./.gen/providers/dnsimple/record";
+import { TerraformStack, TerraformVariable, Token } from "cdktf";
+import { AwsProvider } from "@cdktf/provider-aws/lib/aws-provider";
+import { Instance } from "@cdktf/provider-aws/lib/instance";
+import { DnsimpleProvider } from "@cdktf/provider-dnsimple/lib/provider";
+import { Record } from "@cdktf/provider-dnsimple/lib/record";
 
-class MyStack extends TerraformStack {
+export class ProvidersStack extends TerraformStack {
   constructor(scope: Construct, id: string) {
     super(scope, id);
 
@@ -198,9 +261,21 @@ class MyStack extends TerraformStack {
       instanceType: "t2.micro",
     });
 
+    const dnsimpleToken = new TerraformVariable(this, "dnsimpleToken", {
+      type: "string",
+      description: "dnsimple token",
+      sensitive: true,
+    });
+
+    const dnsimpleAccount = new TerraformVariable(this, "dnsimpleAccount", {
+      type: "string",
+      description: "dnsimple account",
+      sensitive: true,
+    });
+
     new DnsimpleProvider(this, "dnsimple", {
-      token: Token.asString(process.env.DNSIMPLE_TOKEN),
-      account: Token.asString(process.env.DNSIMPLE_ACCOUNT),
+      token: dnsimpleToken.stringValue,
+      account: dnsimpleAccount.stringValue,
     });
 
     new Record(this, "web-www", {
@@ -211,17 +286,13 @@ class MyStack extends TerraformStack {
     });
   }
 }
-
-const app = new App();
-new MyStack(app, "hello-terraform");
-app.synth();
 ```
 
 ```java
+import com.hashicorp.cdktf.TerraformVariableConfig;
 import software.constructs.Construct;
-import com.hashicorp.cdktf.App;
 import com.hashicorp.cdktf.TerraformStack;
-import com.hashicorp.cdktf.Token;
+import com.hashicorp.cdktf.TerraformVariable;
 import imports.aws.instance.Instance;
 import imports.aws.instance.InstanceConfig;
 import imports.aws.provider.AwsProvider;
@@ -247,9 +318,23 @@ public class MainImportClasses extends TerraformStack {
                 .build()
         );
 
+        TerraformVariable dnsimpleToken = new TerraformVariable(this, "dnsimpleToken", TerraformVariableConfig.builder()
+                .type("string")
+                .description("dnsimple token")
+                .sensitive(true)
+                .build()
+        );
+
+        TerraformVariable dnsimpleAccount = new TerraformVariable(this, "dnsimpleAccount", TerraformVariableConfig.builder()
+                .type("string")
+                .description("dnsimple account")
+                .sensitive(true)
+                .build()
+        );
+
         new DnsimpleProvider(this, "dnsimple", DnsimpleProviderConfig.builder()
-                .token(Token.asString(System.getenv("DNSIMPLE_TOKEN")))
-                .account(Token.asString(System.getenv("DNSIMPLE_ACCOUNT")))
+                .token(dnsimpleToken.getStringValue())
+                .account(dnsimpleAccount.getStringValue())
                 .build()
         );
 
@@ -262,18 +347,18 @@ public class MainImportClasses extends TerraformStack {
         );
     }
 
-    public static void main(String[] args) {
-        final App app = new App();
-        new MainImportClasses(app, "hello-terraform");
-        app.synth();
-    }
+     public static void main(String[] args) {
+     final App app = new App();
+     new MainImportClasses(app, "hello-terraform");
+     app.synth();
+     }
 }
 ```
 
 ```python
 import os
 from constructs import Construct
-from cdktf import App, TerraformStack, Token
+from cdktf import App, TerraformStack, TerraformVariable, Token
 from imports.aws.provider import AwsProvider
 from imports.dnsimple.provider import DnsimpleProvider
 from imports.dnsimple.record import Record
@@ -291,9 +376,21 @@ class ProviderStack(TerraformStack):
             instance_type = "t2.micro",
         )
 
+        dnsimpleToken = TerraformVariable(self, "dnsimpleToken",
+            type = "string",
+            description = "dnsimple token",
+            sensitive = True
+        )
+
+        dnsimpleAccount = TerraformVariable(self, "dnsimpleAccount",
+            type = "string",
+            description = "dnsimple account",
+            sensitive = True
+        )
+
         DnsimpleProvider(self, "dnsimple",
-            token = Token.as_string(os.getenv("DNSIMPLE_TOKEN")),
-            account = Token.as_string(os.getenv("DNSIMPLE_ACCOUNT")),
+            token = dnsimpleToken.string_value,
+            account = dnsimpleAccount.string_value
         )
 
         Record(self, "web-www",
@@ -306,6 +403,130 @@ class ProviderStack(TerraformStack):
 app = App()
 ProviderStack(app, "provider-stack")
 app.synth()
+```
+
+```csharp
+using System;
+using System.IO;
+using System.Collections.Generic;
+using System.Linq;
+using Constructs;
+using HashiCorp.Cdktf;
+using aws.Provider;
+using aws.Instance;
+using dnsimple.Provider;
+using dnsimple.Record;
+
+
+namespace Examples
+{
+    class ProviderClassesStack : TerraformStack
+    {
+        public ProviderClassesStack(Construct scope, string name) : base(scope, name)
+        {
+            // Add this to your project's .csproj file:
+            // <ItemGroup>
+            //     <ProjectReference Include=".gen\aws\aws.csproj" />
+            // </ItemGroup>
+            // <ItemGroup>
+            //     <ProjectReference Include=".gen\dnsimple\dnsimple.csproj" />
+            // </ItemGroup>
+
+            new AwsProvider(this, "aws", new AwsProviderConfig
+            {
+                Region = "eu-east-1"
+            });
+
+            Instance instance = new Instance(this, "instance", new InstanceConfig
+            {
+                Ami = "ami-2757f631",
+                InstanceType = "t2.micro"
+            });
+
+            TerraformVariable dnsimpleToken = new TerraformVariable(this, "dnsimpleToken", new TerraformVariableConfig
+            {
+                Type = "string",
+                Description = "dnsimple token",
+                Sensitive = true
+            });
+
+            TerraformVariable dnsimpleAccount = new TerraformVariable(this, "dnsimpleAccount", new TerraformVariableConfig
+            {
+                Type = "string",
+                Description = "dnsimple account",
+                Sensitive = true
+            });
+
+            new DnsimpleProvider(this, "dnsimple", new DnsimpleProviderConfig
+            {
+                Token = dnsimpleToken.StringValue,
+                Account = dnsimpleAccount.StringValue
+            });
+
+            new Record(this, "web-www", new RecordConfig
+            {
+                Domain = "example.com",
+                Name = "web",
+                Value = instance.PublicIp,
+                Type = "A"
+            });
+        }
+    }
+}
+```
+
+```go
+import (
+	"github.com/aws/constructs-go/constructs/v10"
+	"github.com/aws/jsii-runtime-go"
+	"github.com/hashicorp/terraform-cdk-go/cdktf"
+
+	dnsimple "github.com/hashicorp/terraform-cdk/examples/go/documentation/generated/dnsimple/dnsimple/provider"
+	"github.com/hashicorp/terraform-cdk/examples/go/documentation/generated/dnsimple/dnsimple/record"
+
+	"github.com/hashicorp/terraform-cdk/examples/go/documentation/generated/hashicorp/aws/instance"
+	aws "github.com/hashicorp/terraform-cdk/examples/go/documentation/generated/hashicorp/aws/provider"
+)
+
+func NewProvidersStack(scope constructs.Construct, name string) cdktf.TerraformStack {
+	stack := cdktf.NewTerraformStack(scope, &name)
+
+	aws.NewAwsProvider(stack, jsii.String("aws"), &aws.AwsProviderConfig{
+		Region: jsii.String(("us-east-1")),
+	})
+
+	instance := instance.NewInstance(stack, jsii.String("hello"), &instance.InstanceConfig{
+		Ami:          jsii.String("ami-2757f631"),
+		InstanceType: jsii.String("t2.micro"),
+	})
+
+	dnsimpleToken := cdktf.NewTerraformVariable(stack, jsii.String("dnsimpleToken"), &cdktf.TerraformVariableConfig{
+		Type:        jsii.String("string"),
+		Description: jsii.String("dnsimple token"),
+		Sensitive:   jsii.Bool(true),
+	})
+
+	dnsimpleAccount := cdktf.NewTerraformVariable(stack, jsii.String("dnsimpleAccount"), &cdktf.TerraformVariableConfig{
+		Type:        jsii.String("string"),
+		Description: jsii.String("dnsimple account"),
+		Sensitive:   jsii.Bool(true),
+	})
+
+	dnsimple.NewDnsimpleProvider(stack, jsii.String("dnsimple"), &dnsimple.DnsimpleProviderConfig{
+		Token:   dnsimpleToken.StringValue(),
+		Account: dnsimpleAccount.StringValue(),
+	})
+
+	record.NewRecord(stack, jsii.String("web-www"), &record.RecordConfig{
+		Domain: jsii.String("example.com"),
+		Name:   jsii.String("web"),
+		Value:  instance.PublicIp(),
+		Type:   jsii.String("A"),
+	})
+
+	return stack
+}
+
 ```
 
 </CodeTabs>
@@ -383,11 +604,11 @@ cdktf synth --json
 
 ## Provider Caching
 
-Caching prevents CDK for Terraform from re-downloading providers between each CLI command. It is also useful when you need to remove the `cdktf.out` folder and re-synthesize your configuration. Finally, caching is necessary when you use multiple [stacks](/cdktf/concepts/stacks) within one application.
+Caching prevents CDK for Terraform from re-downloading providers between each CLI command. It is also useful when you need to remove the `cdktf.out` folder and re-synthesize your configuration. Finally, caching is necessary when you use multiple [stacks](/terraform/cdktf/concepts/stacks) within one application.
 
 ### Set the Caching Directory
 
-Refer to the Terraform documentation about [how to configure your plugin cache](/cli/config/config-file#provider-plugin-cache). Otherwise, CDKTF automatically sets the `TF_PLUGIN_CACHE_DIR` environment variable to `$HOME/.terraform.d/plugin-cache` when you use `cdktf` cli commands.
+Refer to the Terraform documentation about [how to configure your plugin cache](/terraform/cli/config/config-file#provider-plugin-cache). Otherwise, CDKTF automatically sets the `TF_PLUGIN_CACHE_DIR` environment variable to `$HOME/.terraform.d/plugin-cache` when you use `cdktf` cli commands.
 
 To disable this behavior, set `CDKTF_DISABLE_PLUGIN_CACHE_ENV` to a non null value, like `CDKTF_DISABLE_PLUGIN_CACHE_ENV=1`. You may want to do this when a different cache directory is configured via a `.terraformrc` configuration file.
 
@@ -395,7 +616,7 @@ To disable this behavior, set `CDKTF_DISABLE_PLUGIN_CACHE_ENV` to a non null val
 
 Terraform needs to know the location of local providers to enable CDKTF to generate the appropriate type bindings. You can configure this in two ways:
 
-- [Implied Local Mirrors](/cli/config/config-file#implied-local-mirror-directories)
-- [Development Overrides](/cli/config/config-file#development-overrides-for-provider-developers)
+- [Implied Local Mirrors](/terraform/cli/config/config-file#implied-local-mirror-directories)
+- [Development Overrides](/terraform/cli/config/config-file#development-overrides-for-provider-developers)
 
-Once configured properly, you can reference these providers in the `cdktf.json` file the same way that you reference providers from the Terraform Registry. Refer to the [project configuration documentation](/cdktf/create-and-deploy/configuration-file) for more details about the `cdktf.json` specification.
+Once configured properly, you can reference these providers in the `cdktf.json` file the same way that you reference providers from the Terraform Registry. Refer to the [project configuration documentation](/terraform/cdktf/create-and-deploy/configuration-file) for more details about the `cdktf.json` specification.

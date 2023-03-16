@@ -1,16 +1,15 @@
 // Copyright (c) HashiCorp, Inc
 // SPDX-License-Identifier: MPL-2.0
 import { SynthesizedStack } from "./synth-stack";
-import { Terraform, TerraformPlan } from "./models/terraform";
+import { Terraform } from "./models/terraform";
 import { getConstructIdsForOutputs, NestedTerraformOutputs } from "./output";
-import { logger, Errors } from "@cdktf/commons";
+import { logger } from "@cdktf/commons";
 import { extractJsonLogIfPresent } from "./server/terraform-logs";
-import { TerraformCloud } from "./models/terraform-cloud";
-import { TerraformCli } from "./models/terraform-cli";
-import * as fs from "fs";
-import * as path from "path";
+import { TerraformCli, OutputFilter } from "./models/terraform-cli";
 import { ProviderConstraint } from "./dependencies/dependency-manager";
 import { terraformJsonSchema, TerraformStack } from "./terraform-json";
+import { AbortSignal } from "node-abort-controller"; // polyfill until we update to node 16
+import { TerraformProviderLock } from "./terraform-provider-lock";
 
 export type StackUpdate =
   | {
@@ -20,7 +19,6 @@ export type StackUpdate =
   | {
       type: "planned";
       stackName: string;
-      plan: TerraformPlan;
     }
   | {
       type: "deploying";
@@ -66,82 +64,77 @@ export type StackUpdate =
       stackName: string;
     };
 
+export type StackUserInputUpdate =
+  | StackApprovalUpdate
+  | StackSentinelOverrideUpdate;
+
 export type StackApprovalUpdate = {
   type: "waiting for stack approval";
   stackName: string;
-  plan: TerraformPlan;
   approve: () => void;
   reject: () => void;
+};
+export type StackSentinelOverrideUpdate = {
+  type: "waiting for stack sentinel override";
+  stackName: string;
+  override: () => void;
+  reject: () => void;
+};
+export type ExternalStackApprovalUpdate = {
+  type: "external stack approval reply";
+  stackName: string;
+  approved: boolean; // false = rejected
+};
+export type ExternalStackSentinelOverrideUpdate = {
+  type: "external stack sentinel override reply";
+  stackName: string;
+  overridden: boolean; // false = rejected
 };
 
 async function getTerraformClient(
   abortSignal: AbortSignal,
   stack: SynthesizedStack,
-  isSpeculative: boolean,
   createTerraformLogHandler: (
-    phase: string
+    phase: string,
+    filter?: OutputFilter[]
   ) => (message: string, isError?: boolean) => void
 ): Promise<Terraform> {
-  const parsedStack = terraformJsonSchema.parse(JSON.parse(stack.content));
-
-  if (parsedStack.terraform?.backend?.remote) {
-    const tfClient = new TerraformCloud(
-      abortSignal,
-      stack,
-      parsedStack.terraform.backend.remote,
-      isSpeculative,
-      createTerraformLogHandler
-    );
-    if (await tfClient.isRemoteWorkspace()) {
-      return tfClient;
-    }
-  }
-
-  if (parsedStack.terraform?.cloud) {
-    const workspaces = parsedStack.terraform.cloud.workspaces || {};
-    if (!("name" in workspaces)) {
-      throw Errors.Usage(
-        "The Cloud backend can not used with the cdktf-cli unless specified with a workspace name."
-      );
-    }
-
-    const tfClient = new TerraformCloud(
-      abortSignal,
-      stack,
-      { ...parsedStack.terraform.cloud, workspaces },
-      isSpeculative,
-      createTerraformLogHandler
-    );
-    if (await tfClient.isRemoteWorkspace()) {
-      return tfClient;
-    }
-  }
-
   return new TerraformCli(abortSignal, stack, createTerraformLogHandler);
 }
 
 type CdktfStackOptions = {
   stack: SynthesizedStack;
-  onUpdate: (update: StackUpdate | StackApprovalUpdate) => void;
+  onUpdate: (
+    update:
+      | StackUpdate
+      | StackApprovalUpdate
+      | ExternalStackApprovalUpdate
+      | StackSentinelOverrideUpdate
+      | ExternalStackSentinelOverrideUpdate
+  ) => void;
   onLog?: (log: { message: string; isError: boolean }) => void;
   autoApprove?: boolean;
+  migrateState?: boolean;
   abortSignal: AbortSignal;
 };
+
 type CdktfStackStates =
   | StackUpdate["type"]
   | StackApprovalUpdate["type"]
+  | StackSentinelOverrideUpdate["type"]
+  | ExternalStackApprovalUpdate["type"]
+  | ExternalStackSentinelOverrideUpdate["type"]
   | "idle"
-  | "done"
-  | "error";
+  | "done";
 
 export class CdktfStack {
-  public currentPlan?: TerraformPlan;
   public stack: SynthesizedStack;
   public outputs?: Record<string, any>;
   public outputsByConstructId?: NestedTerraformOutputs;
   public stopped = false;
   public currentWorkPromise: Promise<void> | undefined;
   public readonly currentState: CdktfStackStates = "idle";
+  public error?: string;
   private readonly parsedContent: TerraformStack;
 
   constructor(public options: CdktfStackOptions) {
@@ -157,7 +150,7 @@ export class CdktfStack {
   public get isDone(): boolean {
     return (
       this.currentState === "done" ||
-      this.currentState === "error" ||
+      this.currentState === "errored" ||
       this.stopped
     );
   }
@@ -169,16 +162,22 @@ export class CdktfStack {
     update:
       | StackUpdate
       | StackApprovalUpdate
+      | StackSentinelOverrideUpdate
+      | ExternalStackApprovalUpdate
+      | ExternalStackSentinelOverrideUpdate
       | { type: "idle" }
       | { type: "done" }
-      | { type: "error" }
   ) {
     logger.debug(`[${this.stack.name}]: ${update.type}`);
     (this.currentState as CdktfStackStates) = update.type;
     switch (update.type) {
       case "idle":
       case "done":
-      case "error":
+        break;
+
+      case "errored":
+        this.error = update.error;
+        this.options.onUpdate(update);
         break;
 
       case "outputs fetched":
@@ -199,110 +198,122 @@ export class CdktfStack {
   }
 
   private createTerraformLogHandler(
-    phase: string
+    phase: string,
+    filters?: OutputFilter[]
   ): (message: string, isError?: boolean) => void {
+    logger.debug("creating terraform log hanlder", phase);
+
     const onLog = this.options.onLog;
     return (msg: string, isError = false) => {
       const message = extractJsonLogIfPresent(msg);
       logger.debug(`[${this.options.stack.name}](${phase}): ${msg}`);
+
+      const filterToApply = filters?.find((filter) =>
+        filter.condition(message)
+      );
+      const filteredMessage = filterToApply
+        ? filterToApply.transform(message)
+        : message;
+
+      if (filteredMessage) {
+        logger.debug(
+          `Filter ${filterToApply} applied on line '${message}' with result '${filteredMessage}'`
+        );
+      }
+
       if (onLog) {
-        onLog({ message, isError });
+        onLog({ message: filteredMessage, isError });
       }
     };
   }
 
-  private waitForApproval(plan: TerraformPlan) {
-    return new Promise<boolean>((resolve) => {
-      this.updateState({
-        type: "waiting for stack approval",
-        stackName: this.stack.name,
-        plan: plan,
-        approve: () => {
-          resolve(true);
-        },
-        reject: () => {
-          resolve(false);
-        },
-      });
-    });
-  }
-
-  private async initalizeTerraform({
-    isSpeculative,
-  }: {
-    isSpeculative: boolean;
-  }) {
+  private async initalizeTerraform(noColor?: boolean) {
     const terraform = await getTerraformClient(
       this.options.abortSignal,
       this.options.stack,
-      isSpeculative,
       this.createTerraformLogHandler.bind(this)
     );
 
-    const needsUpgrade = await this.checkLockFile();
+    const needsInit = await this.checkNeedsInit();
+    if (!needsInit) {
+      // Skip terraform init as everything's up to date
+      return terraform;
+    }
 
-    await terraform.init(needsUpgrade);
-
+    const needsUpgrade = await this.checkNeedsUpgrade();
+    await terraform.init(
+      needsUpgrade,
+      noColor ?? false,
+      this.options.migrateState ?? false
+    );
     return terraform;
   }
 
-  private async checkLockFile(): Promise<boolean> {
-    const lockFilePath = path.join(
-      this.stack.workingDirectory,
-      ".terraform.lock.hcl"
-    );
-    try {
-      const lockFile = (await fs.promises.readFile(lockFilePath)).toString();
+  private requiredProviders() {
+    // Read required providers from the stack output
+    const requiredProviders = this.parsedContent.terraform?.required_providers;
 
-      let currentProvider: string | undefined;
-      const lockedProviders: ProviderConstraint[] = [];
+    return Object.values(requiredProviders || {}).reduce((acc, obj) => {
+      const constraint = new ProviderConstraint(obj.source, obj.version);
+      acc[constraint.source] = constraint;
+      return acc;
+    }, {} as Record<string, ProviderConstraint>);
+  }
 
-      lockFile.split(/\r\n|\r|\n/).forEach((line) => {
-        if (currentProvider) {
-          const constraintMatch = line.match(/constraints\s= "(.*)"/);
-          if (constraintMatch) {
-            lockedProviders.push(
-              new ProviderConstraint(currentProvider, constraintMatch[1])
-            );
-            currentProvider = undefined;
-          }
-        } else {
-          const providerMatch = line.match(/provider "(.*)"/);
-          if (providerMatch) {
-            currentProvider = providerMatch[1];
-          }
-        }
-      });
-
-      const requiredProviders =
-        this.parsedContent.terraform?.required_providers;
-      const providers = Object.values(requiredProviders || {}).reduce<
-        Record<string, ProviderConstraint>
-      >((acc, obj) => {
-        const constraint = new ProviderConstraint(obj.source, obj.version);
-        acc[constraint.source] = constraint;
-        return acc;
-      }, {});
-
-      // Check if any provider contained in `providers` violates constraints in `lockedProviders`
-      // Upgrade if some provider constraint not met
-      // If a provider wasn't preset in lockedProviders, that's fine; it will just get added
-      return lockedProviders.some((lockedProvider) => {
-        const provider = providers[lockedProvider.source];
-        if (provider) {
-          return !lockedProvider.matchesVersion(provider.version ?? ">0");
-        }
-
-        // else no longer using this provider, so won't cause problems
-        return false;
-      });
-    } catch (err) {
-      // ignore as this most likely means the file doesn't exist
-      // if it is some other error, Terraform will mention it later
+  private async checkNeedsInit(): Promise<boolean> {
+    if (this.options.migrateState) {
+      // If we're migrating state, we need to init
+      return true;
     }
 
-    // Don't upgrade if something went wrong
+    const lock = new TerraformProviderLock(this.stack.workingDirectory);
+    const lockFileExists = await lock.hasProviderLockFile();
+
+    if (!lockFileExists) {
+      // If we don't have a lock file, this is probably the first init
+      return true;
+    }
+
+    const requiredProviders = this.requiredProviders();
+
+    for (const provider of Object.values(requiredProviders)) {
+      const hasProvider = await lock.hasMatchingProvider(provider);
+      if (!hasProvider) {
+        // If we don't have a provider or version doesn't match, we need to init
+        return true;
+      }
+    }
+
     return false;
+  }
+
+  private async checkNeedsUpgrade(): Promise<boolean> {
+    const lock = new TerraformProviderLock(this.stack.workingDirectory);
+    const allProviders = this.requiredProviders();
+    const lockedProviders = Object.values(await lock.providers());
+
+    // Check if any provider contained in `providers` violates constraints in `lockedProviders`
+    // Upgrade if some provider constraint not met
+    // If a provider wasn't preset in lockedProviders, that's fine; it will just get added
+    return lockedProviders.some((lockedProvider) => {
+      const lockedConstraint = lockedProvider.constraints;
+      if (!lockedConstraint) {
+        // Provider lock doesn't have a constraint specified, so we can't check.
+        // This shouldn't happen
+        logger.debug(
+          `Provider lock doesn't have a constraint for ${lockedProvider.name}`
+        );
+        return false;
+      }
+
+      const provider = allProviders[lockedConstraint.source];
+      if (!provider) {
+        // else no longer using this provider, so won't cause problems
+        return;
+      }
+
+      return !lockedConstraint.matchesVersion(provider.version ?? ">0");
+    });
   }
 
   private async run(cb: () => Promise<void>) {
@@ -315,105 +326,213 @@ export class CdktfStack {
       await this.currentWorkPromise;
       this.updateState({ type: "done" });
     } catch (e) {
+      logger.trace("Error in currentWorkPromise", e);
       this.currentWorkPromise = undefined;
       this.updateState({
         type: "errored",
         stackName: this.stack.name,
         error: String(e),
       });
+      throw e;
+    } finally {
+      this.currentWorkPromise = undefined;
     }
-    this.currentWorkPromise = undefined;
   }
 
-  public async diff(refreshOnly?: boolean, terraformParallelism?: number) {
+  public async diff({
+    refreshOnly,
+    terraformParallelism,
+    vars,
+    varFiles,
+    noColor,
+  }: {
+    refreshOnly?: boolean;
+    terraformParallelism?: number;
+    vars?: string[];
+    varFiles?: string[];
+    noColor?: boolean;
+  }) {
     await this.run(async () => {
       this.updateState({ type: "planning", stackName: this.stack.name });
-      const terraform = await this.initalizeTerraform({ isSpeculative: true });
+      const terraform = await this.initalizeTerraform(noColor);
 
-      const plan = await terraform.plan(
-        false,
+      await terraform.plan({
+        destroy: false,
         refreshOnly,
-        terraformParallelism
-      );
-      this.currentPlan = plan;
-      this.updateState({ type: "planned", stackName: this.stack.name, plan });
+        parallelism: terraformParallelism,
+        vars,
+        varFiles,
+        noColor,
+      });
+      this.updateState({ type: "planned", stackName: this.stack.name });
     });
   }
 
-  public async deploy(refreshOnly?: boolean, terraformParallelism?: number) {
+  public async deploy(opts: {
+    refreshOnly?: boolean;
+    terraformParallelism?: number;
+    noColor?: boolean;
+    vars?: string[];
+    varFiles?: string[];
+  }) {
+    const { refreshOnly, terraformParallelism, noColor, vars, varFiles } = opts;
     await this.run(async () => {
       this.updateState({ type: "planning", stackName: this.stack.name });
-      const terraform = await this.initalizeTerraform({ isSpeculative: false });
+      const terraform = await this.initalizeTerraform(noColor);
 
-      const plan = await terraform.plan(
-        false,
-        refreshOnly,
-        terraformParallelism
-      );
-      this.updateState({ type: "planned", stackName: this.stack.name, plan });
-
-      const approved = this.options.autoApprove
-        ? true
-        : await this.waitForApproval(plan);
-
-      if (!approved) {
-        this.updateState({ type: "dismissed", stackName: this.stack.name });
-        return;
-      }
-
-      this.updateState({ type: "deploying", stackName: this.stack.name });
-      if (plan.needsApply) {
-        await terraform.deploy(
-          plan.planFile,
+      const { cancelled } = await terraform.deploy(
+        {
+          autoApprove: this.options.autoApprove,
           refreshOnly,
-          terraformParallelism
-        );
-      }
-
-      const outputs = await terraform.output();
-      const outputsByConstructId = getConstructIdsForOutputs(
-        JSON.parse(this.stack.content),
-        outputs
+          parallelism: terraformParallelism,
+          vars,
+          varFiles,
+          noColor,
+        },
+        (state) => {
+          // state updates while apply runs that affect the UI
+          if (state.type === "running" && !state.cancelled) {
+            this.updateState({
+              type: "deploying",
+              stackName: this.stack.name,
+            });
+          } else if (state.type === "waiting for approval") {
+            this.updateState({
+              type: "waiting for stack approval",
+              stackName: this.stack.name,
+              approve: state.approve,
+              reject: () => {
+                state.reject();
+                this.updateState({
+                  type: "dismissed",
+                  stackName: this.stack.name,
+                });
+              },
+            });
+          } else if (state.type === "waiting for sentinel override") {
+            this.updateState({
+              type: "waiting for stack sentinel override",
+              stackName: this.stack.name,
+              override: state.override,
+              reject: () => {
+                state.reject();
+                this.updateState({
+                  type: "dismissed",
+                  stackName: this.stack.name,
+                });
+              },
+            });
+          } else if (state.type === "external approval reply") {
+            this.updateState({
+              type: "external stack approval reply",
+              stackName: this.stack.name,
+              approved: state.approved,
+            });
+          } else if (state.type === "external sentinel override reply") {
+            this.updateState({
+              type: "external stack sentinel override reply",
+              stackName: this.stack.name,
+              overridden: state.overridden,
+            });
+          }
+        }
       );
 
-      this.updateState({
-        type: "deployed",
-        stackName: this.stack.name,
-        outputs,
-        outputsByConstructId,
-      });
+      if (!cancelled) {
+        const outputs = await terraform.output();
+        const outputsByConstructId = getConstructIdsForOutputs(
+          JSON.parse(this.stack.content),
+          outputs
+        );
+
+        this.updateState({
+          type: "deployed",
+          stackName: this.stack.name,
+          outputs,
+          outputsByConstructId,
+        });
+      }
     });
   }
 
-  public async destroy(terraformParallelism?: number) {
+  public async destroy(opts: {
+    terraformParallelism?: number;
+    vars?: string[];
+    varFiles?: string[];
+    noColor?: boolean;
+  }) {
+    const { terraformParallelism, noColor, vars, varFiles } = opts;
     await this.run(async () => {
       this.updateState({ type: "planning", stackName: this.stack.name });
-      const terraform = await this.initalizeTerraform({ isSpeculative: false });
+      const terraform = await this.initalizeTerraform(noColor);
+      const { cancelled } = await terraform.destroy(
+        {
+          autoApprove: this.options.autoApprove,
+          parallelism: terraformParallelism,
+          vars,
+          varFiles,
+          noColor,
+        },
+        (state) => {
+          // state updates while apply runs that affect the UI
+          if (state.type === "running" && !state.cancelled) {
+            this.updateState({
+              type: "destroying",
+              stackName: this.stack.name,
+            });
+          } else if (state.type === "waiting for approval") {
+            this.updateState({
+              type: "waiting for stack approval",
+              stackName: this.stack.name,
+              approve: state.approve,
+              reject: () => {
+                state.reject();
+                this.updateState({
+                  type: "dismissed",
+                  stackName: this.stack.name,
+                });
+              },
+            });
+          } else if (state.type === "waiting for sentinel override") {
+            this.updateState({
+              type: "waiting for stack sentinel override",
+              stackName: this.stack.name,
+              override: state.override,
+              reject: () => {
+                state.reject();
+                this.updateState({
+                  type: "dismissed",
+                  stackName: this.stack.name,
+                });
+              },
+            });
+          } else if (state.type === "external approval reply") {
+            this.updateState({
+              type: "external stack approval reply",
+              stackName: this.stack.name,
+              approved: state.approved,
+            });
+          } else if (state.type === "external sentinel override reply") {
+            this.updateState({
+              type: "external stack sentinel override reply",
+              stackName: this.stack.name,
+              overridden: state.overridden,
+            });
+          }
+        }
+      );
 
-      const plan = await terraform.plan(true);
-      this.updateState({ type: "planned", stackName: this.stack.name, plan });
-
-      const approved = this.options.autoApprove
-        ? true
-        : await this.waitForApproval(plan);
-      if (!approved) {
-        this.updateState({ type: "dismissed", stackName: this.stack.name });
-        return;
-      }
-
-      this.updateState({ type: "destroying", stackName: this.stack.name });
-      await terraform.destroy(terraformParallelism);
-
-      this.updateState({
-        type: "destroyed",
-        stackName: this.stack.name,
-      });
+      if (!cancelled)
+        this.updateState({
+          type: "destroyed",
+          stackName: this.stack.name,
+        });
     });
   }
 
   public async fetchOutputs() {
     await this.run(async () => {
-      const terraform = await this.initalizeTerraform({ isSpeculative: false });
+      const terraform = await this.initalizeTerraform();
 
       const outputs = await terraform.output();
       const outputsByConstructId = getConstructIdsForOutputs(

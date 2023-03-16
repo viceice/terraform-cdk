@@ -113,19 +113,56 @@ export abstract class AbstractTerraformPlan implements TerraformPlan {
   }
 }
 
+export type TerraformDeployState =
+  | { type: "running"; cancelled: boolean }
+  | {
+      type: "waiting for approval";
+      approve: () => void;
+      reject: () => void;
+    }
+  | {
+      type: "waiting for sentinel override";
+      override: () => void;
+      reject: () => void;
+    }
+  | { type: "external approval reply"; approved: boolean }
+  | { type: "external sentinel override reply"; overridden: boolean };
+
 export interface Terraform {
-  init: (upgrade: boolean) => Promise<void>;
-  plan: (
-    destroy: boolean,
-    refreshOnly?: boolean,
-    parallelism?: number
-  ) => Promise<TerraformPlan>;
+  init: (
+    upgrade: boolean,
+    noColor: boolean,
+    migrateState: boolean
+  ) => Promise<void>;
+  plan: (opts: {
+    destroy: boolean;
+    refreshOnly?: boolean;
+    parallelism?: number;
+    vars?: string[];
+    varFiles?: string[];
+    noColor?: boolean;
+  }) => Promise<void>;
   deploy(
-    planFile: string,
-    refreshOnly?: boolean,
-    parallelism?: number
-  ): Promise<void>;
-  destroy(parallelism?: number): Promise<void>;
+    options: {
+      autoApprove?: boolean;
+      refreshOnly?: boolean;
+      parallelism?: number;
+      vars?: string[];
+      varFiles?: string[];
+      noColor?: boolean;
+    },
+    callback: (state: TerraformDeployState) => void
+  ): Promise<{ cancelled: boolean }>;
+  destroy(
+    options: {
+      autoApprove?: boolean;
+      parallelism?: number;
+      vars?: string[];
+      varFiles?: string[];
+      noColor?: boolean;
+    },
+    callback: (state: TerraformDeployState) => void
+  ): Promise<{ cancelled: boolean }>;
   output(): Promise<{ [key: string]: TerraformOutput }>;
   abort: () => Promise<void>;
 }

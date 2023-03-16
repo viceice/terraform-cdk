@@ -36,7 +36,7 @@ class Command extends BaseCommand {
         "Takes the HCL content of main.tf and converts it to CDK for Terraform content in imported.ts"
       )
       .option("language", {
-        choices: ["typescript", "python", "csharp", "java"],
+        choices: ["typescript", "python", "csharp", "java", "go"],
         default: readCdktfJson()?.language || "typescript",
       })
       .option("provider", {
@@ -44,6 +44,11 @@ class Command extends BaseCommand {
           "The conversion needs to know which providers are used in addition to the ones in your cdktf.json file. We search for a cdktf.json below your current working directory.",
         type: "array",
         default: [],
+      })
+      .option("stack", {
+        describe: "Wrap the generated code within a stack class",
+        type: "boolean",
+        default: false,
       })
       .showHelpOnFail(true);
 

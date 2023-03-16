@@ -7,7 +7,7 @@
     "docs": "node ./scripts/generate-documentation.js",
     "watch": "jsii -w --silence-warnings reserved-word",
     "watch-preserve-output": "tsc -w --preserveWatchOutput",
-    "package": "jsii-pacmak",
+    "package": "jsii-pacmak && bash ./go-copyright-header.sh",
     "package:python": "jsii-pacmak --targets python",
     "package:java": "jsii-pacmak --targets java",
     "package:dotnet": "jsii-pacmak --targets dotnet",
@@ -23,6 +23,11 @@
   "jsii": {
     "outdir": "dist",
     "versionFormat": "short",
+    "license": "MPL-2.0",
+    "author": {
+      "name": "HashiCorp, Inc.",
+      "organization": true
+    },
     "targets": {
       "python": {
         "distName": "cdktf",
@@ -96,25 +101,26 @@
   "devDependencies": {
     "@types/jest": "^25.2.3",
     "@types/json-stable-stringify": "^1.0.34",
-    "@types/node": "^14.18.30",
-    "@types/semver": "^7.3.12",
+    "@types/minimatch": "^5.1.2",
+    "@types/node": "^14.18.33",
+    "@types/semver": "^7.3.13",
     "@typescript-eslint/eslint-plugin": "^4.33.0",
     "@typescript-eslint/parser": "^4.33.0",
     "constructs": "^10.0.25",
     "eslint": "^7.32.0",
-    "eslint-plugin-jsdoc": "^39.3.6",
+    "eslint-plugin-jsdoc": "^39.6.2",
     "eslint-plugin-no-instanceof": "1.0.1",
     "jest": "^26.6.3",
-    "jsii": "^1.68.0",
-    "jsii-docgen": "^7.0.95",
-    "jsii-pacmak": "^1.68.0",
+    "jsii": "^1.77.0",
+    "jsii-docgen": "^7.0.234",
+    "jsii-pacmak": "^1.77.0",
     "ts-jest": "^26.5.6",
     "typescript": "^3.9.10"
   },
   "dependencies": {
     "archiver": "5.3.1",
-    "json-stable-stringify": "^1.0.1",
-    "semver": "^7.3.7"
+    "json-stable-stringify": "^1.0.2",
+    "semver": "^7.3.8"
   },
   "bundledDependencies": [
     "archiver",

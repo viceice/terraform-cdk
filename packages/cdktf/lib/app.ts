@@ -10,7 +10,7 @@ import { TerraformStack } from "./terraform-stack";
 
 const APP_SYMBOL = Symbol.for("cdktf/App");
 export const CONTEXT_ENV = "CDKTF_CONTEXT_JSON";
-export interface AppOptions {
+export interface AppConfig {
   /**
    * The directory to output Terraform resources.
    *
@@ -61,20 +61,20 @@ export class App extends Construct {
 
   /**
    * Defines an app
-   * @param options configuration options
+   * @param config configuration
    */
-  constructor(options: AppOptions = {}) {
+  constructor(config: AppConfig = {}) {
     super(undefined as any, "");
     Object.defineProperty(this, APP_SYMBOL, { value: true });
 
-    this.outdir = process.env.CDKTF_OUTDIR ?? options.outdir ?? "cdktf.out";
+    this.outdir = process.env.CDKTF_OUTDIR ?? config.outdir ?? "cdktf.out";
     this.targetStackId = process.env.CDKTF_TARGET_STACK_ID;
-    this.skipValidation = options.skipValidation;
+    this.skipValidation = config.skipValidation;
 
-    this.loadContext(options.context);
+    this.loadContext(config.context);
 
     const node = this.node;
-    if (options.stackTraces === false) {
+    if (config.stackTraces === false) {
       node.setContext(DISABLE_STACK_TRACE_IN_METADATA, true);
     }
 
@@ -127,6 +127,16 @@ export class App extends Construct {
 
     stacks.forEach((stack) => stack.prepareStack());
     stacks.forEach((stack) => stack.synthesizer.synthesize(session));
+
+    if (!this.skipValidation) {
+      const validations = this.node.validate();
+      if (validations.length) {
+        const errorList = validations.join("\n  ");
+        throw new Error(
+          `App level validation failed with the following errors:\n  ${errorList}`
+        );
+      }
+    }
 
     this.manifest.writeToFile();
   }

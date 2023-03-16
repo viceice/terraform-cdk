@@ -14,26 +14,30 @@ Aspects allow you to apply an operation to all constructs within a given scope. 
 
 To create an aspect, you must import the `Aspects` class and the `IAspect` interface and implement one or more methods for `IAspect`. Then, you can call the aspect one or more times on any construct within your application.
 
-Everything within a CDKTF application descends from the `Construct` class, so you could call the construct on any instantiated element. This includes the entire application, a particular [stack](/cdktf/concepts/stacks), or all of the resources for a specific [provider](/cdktf/concepts/providers). When you call the aspect, CDKTF applies its methods to all of the the constructs that fall within the specified scope.
+Everything within a CDKTF application descends from the `Construct` class, so you could call the construct on any instantiated element. This includes the entire application, a particular [stack](/terraform/cdktf/concepts/stacks), or all of the resources for a specific [provider](/terraform/cdktf/concepts/providers). When you call the aspect, CDKTF applies its methods to all of the the constructs that fall within the specified scope.
 
 The following example defines an aspect to add tags to resources.
 
+<!-- #NEXT_CODE_BLOCK_SOURCE:ts examples/typescript/documentation#aspect-tagging -->
 <!-- #NEXT_CODE_BLOCK_SOURCE:python examples/python/documentation#define-aspects -->
 <!-- #NEXT_CODE_BLOCK_SOURCE:csharp examples/csharp/documentation#aspect-tagging -->
-
 <!-- #NEXT_CODE_BLOCK_SOURCE:java examples/java/documentation#define-aspects -->
+<!-- #NEXT_CODE_BLOCK_SOURCE:go examples/go/documentation#aspect-tagging -->
 
 <CodeTabs>
 
 ```ts
-import { IConstruct } from "constructs";
-import { Aspects, IAspect } from "cdktf";
+import { Construct, IConstruct } from "constructs";
+import { Aspects, IAspect, TerraformStack, App } from "cdktf";
+import { AwsProvider } from "./.gen/providers/aws/provider";
+import { S3Bucket } from "./.gen/providers/aws/s3-bucket";
 
 // Not all constructs are taggable, so we need to filter it
 type TaggableConstruct = IConstruct & {
   tags?: { [key: string]: string };
   tagsInput?: { [key: string]: string };
 };
+
 function isTaggableConstruct(x: IConstruct): x is TaggableConstruct {
   return "tags" in x && "tagsInput" in x;
 }
@@ -51,8 +55,25 @@ export class TagsAddingAspect implements IAspect {
   }
 }
 
-// Add tags to every resource defined within `myStack`.
-Aspects.of(myStack).add(new TagsAddingAspect({ createdBy: "cdktf" }));
+export class AspectTaggingStack extends TerraformStack {
+  constructor(scope: Construct, name: string) {
+    super(scope, name);
+
+    new AwsProvider(this, "aws", {
+      region: "us-west-2",
+    });
+
+    new S3Bucket(this, "bucket", {
+      bucket: "demo",
+      tags: {
+        owner: "cdktf",
+      },
+    });
+
+    // Add tags to every resource defined within this stack.
+    Aspects.of(this).add(new TagsAddingAspect({ createdBy: "cdktf" }));
+  }
+}
 ```
 
 ```java
@@ -155,7 +176,7 @@ using Amazon.JSII.Runtime;
 
 namespace Examples
 {
-    public class TagsAddingAspect: Amazon.JSII.Runtime.Deputy.DeputyBase, IAspect
+    public class TagsAddingAspect : Amazon.JSII.Runtime.Deputy.DeputyBase, IAspect
     {
         private readonly IDictionary<string, string> tagsToAdd;
 
@@ -171,7 +192,7 @@ namespace Examples
             var tagsInputProperty = nodeType.GetProperty("TagsInput");
             if (tagsProperty != null && tagsInputProperty != null)
             {
-                var inputTags = (IDictionary<string, string>) tagsInputProperty.GetValue(node);
+                var inputTags = (IDictionary<string, string>)tagsInputProperty.GetValue(node);
 
                 IDictionary<string, string> newTags;
                 if (inputTags == null)
@@ -196,10 +217,12 @@ namespace Examples
     {
         public MyAspectsStack(Construct scope, string name) : base(scope, name)
         {
-            new AwsProvider(this, "Aws", new AwsProviderConfig {
+            new AwsProvider(this, "Aws", new AwsProviderConfig
+            {
                 Region = "us-east-1"
             });
-            S3Bucket bucket = new S3Bucket(this, "bucket", new S3BucketConfig {
+            S3Bucket bucket = new S3Bucket(this, "bucket", new S3BucketConfig
+            {
                 Bucket = "demo"
             });
 
@@ -211,20 +234,79 @@ namespace Examples
 }
 ```
 
+```go
+package main
+
+import (
+	"github.com/aws/constructs-go/constructs/v10"
+	"github.com/aws/jsii-runtime-go"
+	"github.com/hashicorp/terraform-cdk-go/cdktf"
+	aws "github.com/hashicorp/terraform-cdk/examples/go/documentation/generated/hashicorp/aws/provider"
+	"github.com/hashicorp/terraform-cdk/examples/go/documentation/generated/hashicorp/aws/s3bucket"
+	"golang.org/x/exp/maps"
+)
+
+type Taggable interface {
+	TagsInput() *map[string]*string
+	SetTags(val *map[string]*string)
+}
+
+type TagsAddingAspect struct {
+	Tags *map[string]*string
+}
+
+func (taa TagsAddingAspect) Visit(node constructs.IConstruct) {
+	if taggable, ok := node.(Taggable); ok {
+		existing := *taggable.TagsInput()
+		tags := *taa.Tags
+		maps.Copy(existing, tags) // requires Go 1.18
+		taggable.SetTags(&existing)
+	}
+}
+
+func NewTagsAddingAspect(tags *map[string]*string) *TagsAddingAspect {
+	return &TagsAddingAspect{Tags: tags}
+}
+
+func NewAspectsStack(scope constructs.Construct, name string) cdktf.TerraformStack {
+	stack := cdktf.NewTerraformStack(scope, &name)
+
+	aws.NewAwsProvider(stack, jsii.String("aws"), &aws.AwsProviderConfig{
+		Region: jsii.String("us-east-1"),
+	})
+
+	s3bucket.NewS3Bucket(stack, jsii.String("bucket"), &s3bucket.S3BucketConfig{
+		Bucket: jsii.String("demo"),
+		Tags: &map[string]*string{
+			"owner": jsii.String("cdktf"),
+		},
+	})
+
+	cdktf.Aspects_Of(stack).Add(
+		NewTagsAddingAspect(&map[string]*string{"createdBy": jsii.String("cdktf")}),
+	)
+
+	return stack
+}
+
+```
+
 </CodeTabs>
 
 You can also use aspects for validation. The following example defines an aspect that checks whether all S3 Buckets start with the correct prefix.
 
+<!-- #NEXT_CODE_BLOCK_SOURCE:ts examples/typescript/documentation#aspect-validation -->
 <!-- #NEXT_CODE_BLOCK_SOURCE:python examples/python/documentation#aspects-validation -->
 <!-- #NEXT_CODE_BLOCK_SOURCE:csharp examples/csharp/documentation#aspect-validation -->
-
 <!-- #NEXT_CODE_BLOCK_SOURCE:java examples/java/documentation#aspects-validation -->
+<!-- #NEXT_CODE_BLOCK_SOURCE:go examples/go/documentation#aspects-validation -->
 
 <CodeTabs>
 
 ```ts
-import { IConstruct } from "constructs";
-import { Aspects, IAspect, Annotations } from "cdktf";
+import { Annotations, Aspects, IAspect, TerraformStack } from "cdktf";
+import { Construct, IConstruct } from "constructs";
+import { AwsProvider } from "./.gen/providers/aws/provider";
 import { S3Bucket } from "./.gen/providers/aws/s3-bucket";
 
 export class ValidateS3IsPrefixed implements IAspect {
@@ -244,8 +326,21 @@ export class ValidateS3IsPrefixed implements IAspect {
   }
 }
 
-// Check the prefix for every resource within `myStack`.
-Aspects.of(myStack).add(new ValidateS3IsPrefixed("myPrefix"));
+export class AspectValidationStack extends TerraformStack {
+  constructor(scope: Construct, name: string) {
+    super(scope, name);
+
+    new AwsProvider(this, "aws", {
+      region: "us-west-2",
+    });
+
+    new S3Bucket(this, "bucket", {
+      bucket: "myPrefixDemo",
+    });
+
+    Aspects.of(this).add(new ValidateS3IsPrefixed("myPrefix"));
+  }
+}
 ```
 
 ```java
@@ -309,7 +404,7 @@ using Amazon.JSII.Runtime;
 
 namespace Examples
 {
-    public class ValidateS3IsPrefixed: Amazon.JSII.Runtime.Deputy.DeputyBase, IAspect
+    public class ValidateS3IsPrefixed : Amazon.JSII.Runtime.Deputy.DeputyBase, IAspect
     {
         private readonly string prefix;
 
@@ -334,10 +429,12 @@ namespace Examples
     {
         public MyAspectsValidationStack(Construct scope, string name) : base(scope, name)
         {
-            new AwsProvider(this, "Aws", new AwsProviderConfig {
+            new AwsProvider(this, "Aws", new AwsProviderConfig
+            {
                 Region = "us-east-1"
             });
-            S3Bucket bucket = new S3Bucket(this, "bucket", new S3BucketConfig {
+            S3Bucket bucket = new S3Bucket(this, "bucket", new S3BucketConfig
+            {
                 Bucket = "myPrefixDemo"
             });
 
@@ -345,6 +442,55 @@ namespace Examples
         }
     }
 }
+```
+
+```go
+package main
+
+import (
+	"strings"
+
+	"github.com/aws/constructs-go/constructs/v10"
+	"github.com/aws/jsii-runtime-go"
+	"github.com/hashicorp/terraform-cdk-go/cdktf"
+	aws "github.com/hashicorp/terraform-cdk/examples/go/documentation/generated/hashicorp/aws/provider"
+	"github.com/hashicorp/terraform-cdk/examples/go/documentation/generated/hashicorp/aws/s3bucket"
+)
+
+type S3Bucket interface {
+	GetBucketInput() *string
+}
+
+type ValidateS3IsPrefixedAspect struct {
+	Prefix string
+}
+
+func (vpa ValidateS3IsPrefixedAspect) Visit(node constructs.IConstruct) {
+	if bucket, ok := node.(s3bucket.S3Bucket); ok && strings.HasPrefix(*bucket.BucketInput(), vpa.Prefix) {
+		cdktf.Annotations_Of(node).AddError(jsii.String("Each S3 Bucket name needs to start with " + vpa.Prefix))
+	}
+}
+
+func NewValidateS3IsPrefixedAspect(prefix string) *ValidateS3IsPrefixedAspect {
+	return &ValidateS3IsPrefixedAspect{Prefix: prefix}
+}
+
+func NewPrefixAspectsStack(scope constructs.Construct, name string) cdktf.TerraformStack {
+	stack := cdktf.NewTerraformStack(scope, &name)
+
+	aws.NewAwsProvider(stack, jsii.String("aws"), &aws.AwsProviderConfig{
+		Region: jsii.String("us-east-1"),
+	})
+
+	s3bucket.NewS3Bucket(stack, jsii.String("bucket"), &s3bucket.S3BucketConfig{
+		Bucket: jsii.String("myPrefixDemo"),
+	})
+
+	cdktf.Aspects_Of(stack).Add(NewValidateS3IsPrefixedAspect("myPrefix"))
+
+	return stack
+}
+
 ```
 
 </CodeTabs>

@@ -1,4 +1,7 @@
-//+ build js,wasm
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
+// + build js,wasm
 package main
 
 import (
@@ -63,7 +66,7 @@ func main() {
 		return string(converted), err
 	})
 
-	registerFn("getReferencesInExpression", func(this js.Value, args []js.Value) (interface{}, error) {
+	registerFn("parseExpression", func(this js.Value, args []js.Value) (interface{}, error) {
 		if len(args) == 0 {
 			return nil, fmt.Errorf("No arguments provided")
 		}
@@ -72,7 +75,6 @@ func main() {
 		if err != nil {
 			return nil, err
 		}
-
 
 		if !hcljson.IsJSONExpression(expr) {
 			return nil, fmt.Errorf("Expected JSON expression")
@@ -97,7 +99,6 @@ func main() {
 	})
 	<-c
 }
-
 
 func expressionForValue(val cty.Value) (hclsyntax.Expression, hcl.Diagnostics) {
 	// NOTE: This intentionally only supports the subset of cty

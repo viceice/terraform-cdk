@@ -7,11 +7,11 @@ description: >-
 
 # HCL Interoperability
 
-Terraform requires infrastructure configuration files written in either [HashiCorp Configuration Language (HCL)](/language/syntax/configuration) or JSON syntax. CDK for Terraform (CDKTF) works by translating configurations defined in an imperative programming language to JSON configuration files for Terraform.
+Terraform requires infrastructure configuration files written in either [HashiCorp Configuration Language (HCL)](/terraform/language/syntax/configuration) or JSON syntax. CDK for Terraform (CDKTF) works by translating configurations defined in an imperative programming language to JSON configuration files for Terraform.
 
 CDKTF may not be the right choice for every team and project within your organization. For example, some teams may already be very familiar with Terraform and have created HCL modules, providers, etc. To provide flexibility, CDKTF applications are interoperable with Terraform projects written in HCL. Specifically:
 
-- CDKTF applications can use all existing Terraform [providers](/cdktf/concepts/providers) and HCL [modules](/cdktf/concepts/modules).
+- CDKTF applications can use all existing Terraform [providers](/terraform/cdktf/concepts/providers) and HCL [modules](/terraform/cdktf/concepts/modules).
 - CDKTF can generate modules that HCL Terraform projects can use in their configurations.
 
 This page shows how you can interoperate HCL and CDK for Terraform configuration.
@@ -20,19 +20,21 @@ This page shows how you can interoperate HCL and CDK for Terraform configuration
 
 The following example is a CDKTF application that uses the `hashicorp/random` provider to generate a random name.
 
+<!-- #NEXT_CODE_BLOCK_SOURCE:ts examples/typescript/documentation#hcl-interop -->
 <!-- #NEXT_CODE_BLOCK_SOURCE:python examples/python/documentation#hcl-interop -->
 <!-- #NEXT_CODE_BLOCK_SOURCE:java examples/java/documentation#hcl-interop -->
 <!-- #NEXT_CODE_BLOCK_SOURCE:csharp examples/csharp/documentation#hcl-interop -->
+<!-- #NEXT_CODE_BLOCK_SOURCE:go examples/go/documentation#hcl-interop -->
 
 <CodeTabs>
 
 ```ts
 import { Construct } from "constructs";
-import { App, TerraformOutput, TerraformStack, TerraformVariable } from "cdktf";
-import { Pet } from "./.gen/providers/random/pet";
-import { RandomProvider } from "./.gen/providers/random/provider";
+import { TerraformOutput, TerraformStack, TerraformVariable } from "cdktf";
+import { Pet } from "@cdktf/provider-random/lib/pet";
+import { RandomProvider } from "@cdktf/provider-random/lib/provider";
 
-class MyStack extends TerraformStack {
+export class HCLInteropStack extends TerraformStack {
   constructor(scope: Construct, name: string) {
     super(scope, name);
 
@@ -52,10 +54,6 @@ class MyStack extends TerraformStack {
     });
   }
 }
-
-const app = new App();
-new MyStack(app, "random-pet-module");
-app.synth();
 ```
 
 ```java
@@ -144,24 +142,60 @@ namespace Examples
     {
         public HclInteropStack(Construct scope, string name) : base(scope, name)
         {
-            new RandomProvider(this, "default", new RandomProviderConfig {});
+            new RandomProvider(this, "default", new RandomProviderConfig { });
 
-            var petNameLength = new TerraformVariable(this, "petNameLength", new TerraformVariableConfig {
+            var petNameLength = new TerraformVariable(this, "petNameLength", new TerraformVariableConfig
+            {
                 Type = "number",
                 Default = 2,
                 Description = "Pet name length"
             });
 
-            var myPet = new Pet(this, "example", new PetConfig {
+            var myPet = new Pet(this, "example", new PetConfig
+            {
                 Length = petNameLength.NumberValue
             });
 
-            new TerraformOutput(this, "name", new TerraformOutputConfig {
+            new TerraformOutput(this, "name", new TerraformOutputConfig
+            {
                 Value = myPet.Id
             });
         }
     }
 }
+```
+
+```go
+import (
+	"github.com/aws/constructs-go/constructs/v10"
+	"github.com/aws/jsii-runtime-go"
+	"github.com/hashicorp/terraform-cdk-go/cdktf"
+	"github.com/hashicorp/terraform-cdk/examples/go/documentation/generated/hashicorp/random/pet"
+	random "github.com/hashicorp/terraform-cdk/examples/go/documentation/generated/hashicorp/random/provider"
+)
+
+func NewHclInteropStack(scope constructs.Construct, name string) cdktf.TerraformStack {
+	stack := cdktf.NewTerraformStack(scope, &name)
+
+	random.NewRandomProvider(stack, jsii.String("default"), &random.RandomProviderConfig{})
+
+	petNameLength := cdktf.NewTerraformVariable(stack, jsii.String("petNameLength"), &cdktf.TerraformVariableConfig{
+		Type:        jsii.String("number"),
+		Default:     jsii.Number(2),
+		Description: jsii.String("Pet name length"),
+	})
+
+	myPet := pet.NewPet(stack, jsii.String("example"), &pet.PetConfig{
+		Length: petNameLength.NumberValue(),
+	})
+
+	cdktf.NewTerraformOutput(stack, jsii.String("name"), &cdktf.TerraformOutputConfig{
+		Value: myPet.Id(),
+	})
+
+	return stack
+}
+
 ```
 
 </CodeTabs>
@@ -192,4 +226,4 @@ output "name" {
 
 ## HCL to CDKTF
 
-Use the [`cdktf convert`](/cdktf/cli-reference/commands#convert) command to automatically translate existing HCL into a preferred CDKTF language. The [modules documentation](/cdktf/concepts/modules) shows how to use existing Terraform modules in CDK for Terraform projects.
+Use the [`cdktf convert`](/terraform/cdktf/cli-reference/commands#convert) command to automatically translate existing HCL into a preferred CDKTF language. The [modules documentation](/terraform/cdktf/concepts/modules) shows how to use existing Terraform modules in CDK for Terraform projects.

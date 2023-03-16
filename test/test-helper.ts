@@ -3,7 +3,7 @@
 import { TemplateServer } from "./template-server";
 import { spawn, execSync } from "child_process";
 import * as execa from "execa";
-import { spawn as ptySpawn } from "node-pty";
+import { spawn as ptySpawn } from "@cdktf/node-pty-prebuilt-multiarch";
 
 const os = require("os");
 const path = require("path");
@@ -199,15 +199,24 @@ export class TestDriver {
     );
   };
 
-  diff = (stackName?: string) => {
+  diff = (stackName?: string, otherFlags?: string[]) => {
     return stripAnsi(
-      execSyncLogErrors(`cdktf diff ${stackName ? stackName : ""}`, {
-        env: this.env,
-      }).toString()
+      execSyncLogErrors(
+        `cdktf diff ${stackName ? stackName : ""} ${
+          otherFlags?.length ? otherFlags.join(" ") : ""
+        }`,
+        {
+          env: this.env,
+        }
+      ).toString()
     );
   };
 
-  deploy = async (stackNames?: string[], outputsFilePath?: string) => {
+  deploy = async (
+    stackNames?: string[],
+    outputsFilePath?: string,
+    otherFlags?: string[]
+  ) => {
     const result = await execa(
       "cdktf",
       [
@@ -215,6 +224,7 @@ export class TestDriver {
         ...(stackNames || []),
         "--auto-approve",
         ...(outputsFilePath ? [`--outputs-file=${outputsFilePath}`] : []),
+        ...(otherFlags || []),
       ],
       { env: { ...process.env, ...this.env } } // make sure env is up to date
     );
@@ -313,7 +323,6 @@ export class TestDriver {
     cb?: (workingDirectory) => void;
   }) => {
     this.switchToTempDir();
-    console.log(this.workingDirectory);
     await this.init("go", options?.init?.additionalOptions);
     this.copyFiles("cdktf.json");
     this.copyFile("main.go", "main.go");

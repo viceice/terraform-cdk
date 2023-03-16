@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 // DOCS_BLOCK_START:datasources
 using System;
 using System.IO;
@@ -15,11 +18,13 @@ namespace Examples
         public DataSourceStack(Construct scope, string name) : base(scope, name)
         {
 
-            new AwsProvider(this, "aws", new AwsProviderConfig {
+            new AwsProvider(this, "aws", new AwsProviderConfig
+            {
                 Region = "eu-central-1"
             });
 
-            DataAwsRegion region = new DataAwsRegion(this, "region", new DataAwsRegionConfig {
+            DataAwsRegion region = new DataAwsRegion(this, "region", new DataAwsRegionConfig
+            {
                 Name = "eu-central-1"
             });
         }

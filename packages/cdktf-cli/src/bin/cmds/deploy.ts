@@ -76,6 +76,32 @@ class Command extends BaseCommand {
         // Setting value to negative will prevent it from being forwarded to terraform as an argument
         default: -1,
       })
+      // The presence of this flag is automatically picked up by `chalk` as well which
+      // causes colors to be disabled too for output that the cdktf-cli itself colors.
+      .option("no-color", {
+        type: "boolean",
+        default: process.env.FORCE_COLOR === "0",
+        required: false,
+        desc: "Disables terminal formatting sequences in the output.",
+      })
+      .option("migrate-state", {
+        type: "boolean",
+        default: false,
+        required: false,
+        desc: "Pass this flag after switching state backends to approve a state migration for all targeted stacks",
+      })
+      .option("var", {
+        type: "array",
+        default: [],
+        required: false,
+        desc: "Set a value for one of the input variables in the stack or stacks to apply. Use this option more than once to set more than one variable.",
+      })
+      .option("var-file", {
+        type: "array",
+        default: [],
+        required: false,
+        desc: "Load variable values from the given file, in addition to the default files terraform.tfvars and *.auto.tfvars. Use this option more than once to include more than one variables file.",
+      })
       .showHelpOnFail(true);
 
   public async handleCommand(argv: any) {

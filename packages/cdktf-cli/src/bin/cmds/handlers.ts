@@ -40,6 +40,7 @@ import { Get } from "./ui/get";
 import { List } from "./ui/list";
 import { Synth } from "./ui/synth";
 import { Watch } from "./ui/watch";
+import { ProviderListTable } from "./ui/provider-list";
 
 import {
   NestedTerraformOutputs,
@@ -59,6 +60,7 @@ import {
   checkEnvironment,
   verifySimilarLibraryVersion,
 } from "./helper/check-environment";
+import { sanitizeVarFiles } from "./helper/var-files";
 
 const chalkColour = new chalk.Instance();
 const config = readConfigSync();
@@ -79,7 +81,7 @@ async function getProviderRequirements(provider: string[]) {
   return [...provider, ...providersFromConfig];
 }
 
-export async function convert({ language, provider }: any) {
+export async function convert({ language, provider, stack }: any) {
   await initializErrorReporting();
   await displayVersionMessage();
 
@@ -103,8 +105,10 @@ export async function convert({ language, provider }: any) {
     const { all, stats } = await hcl2cdkConvert(input, {
       language,
       providerSchema: providerSchema ?? {},
+      codeContainer: stack ? "cdktf.TerraformStack" : "constructs.Construct",
     });
     output = all;
+
     await sendTelemetry("convert", { ...stats, error: false });
   } catch (err) {
     throw Errors.Internal((err as Error).message, { language });
@@ -128,6 +132,10 @@ export async function deploy(argv: any) {
   const ignoreMissingStackDependencies =
     argv.ignoreMissingStackDependencies || false;
   const parallelism = argv.parallelism;
+  const vars = argv.var;
+  const varFiles = sanitizeVarFiles(argv.varFile);
+  const noColor = argv.noColor;
+  const migrateState = argv.migrateState;
 
   let outputsPath: string | undefined = undefined;
   // eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -138,7 +146,6 @@ export async function deploy(argv: any) {
     onOutputsRetrieved = (outputs: NestedTerraformOutputs) =>
       saveOutputs(outputsPath!, outputs, includeSensitiveOutputs);
   }
-
   await renderInk(
     React.createElement(Deploy, {
       outDir,
@@ -151,6 +158,10 @@ export async function deploy(argv: any) {
       parallelism,
       refreshOnly,
       terraformParallelism,
+      vars,
+      varFiles,
+      noColor,
+      migrateState,
     })
   );
 }
@@ -168,6 +179,10 @@ export async function destroy(argv: any) {
     argv.ignoreMissingStackDependencies || false;
   const parallelism = argv.parallelism;
   const terraformParallelism = argv.terraformParallelism;
+  const vars = argv.var;
+  const varFiles = sanitizeVarFiles(argv.varFile);
+  const noColor = argv.noColor;
+  const migrateState = argv.migrateState;
 
   await renderInk(
     React.createElement(Destroy, {
@@ -178,6 +193,10 @@ export async function destroy(argv: any) {
       ignoreMissingStackDependencies,
       parallelism,
       terraformParallelism,
+      vars,
+      varFiles,
+      noColor,
+      migrateState,
     })
   );
 }
@@ -192,6 +211,10 @@ export async function diff(argv: any) {
   const stack = argv.stack;
   const refreshOnly = argv.refreshOnly;
   const terraformParallelism = argv.terraformParallelism;
+  const vars = argv.var;
+  const varFiles = sanitizeVarFiles(argv.varFile);
+  const noColor = argv.noColor;
+  const migrateState = argv.migrateState;
 
   await renderInk(
     React.createElement(Diff, {
@@ -200,6 +223,10 @@ export async function diff(argv: any) {
       targetStack: stack,
       synthCommand: command,
       terraformParallelism,
+      vars,
+      varFiles,
+      noColor,
+      migrateState,
     })
   );
 }
@@ -310,10 +337,12 @@ export async function login(argv: { tfeHostname: string }) {
     logger.debug(`No TTY stream passed to login`);
   }
 
+  const sanitizedToken = token.replace(/\n/g, "");
+
   // If we get a token through stdin, we don't need to ask for credentials, we just validate and set it
   // This is useful for programmatically authenticating, e.g. a CI server
   if (token) {
-    await terraformLogin.saveTerraformCredentials(token.replace(/\n/g, ""));
+    await terraformLogin.saveTerraformCredentials(sanitizedToken);
   } else {
     token = await terraformLogin.askToLogin();
     if (token === "") {
@@ -321,7 +350,7 @@ export async function login(argv: { tfeHostname: string }) {
     }
   }
 
-  await showUserDetails(token);
+  await showUserDetails(sanitizedToken || token);
 }
 
 export async function synth(argv: any) {
@@ -510,4 +539,50 @@ export async function providerUpgrade(argv: any) {
       ),
     });
   }
+}
+
+export async function providerList(argv: any) {
+  const config = CdktfConfig.read();
+  const language = config.language;
+  const cdktfVersion = await getPackageVersion(language, "cdktf");
+
+  if (!cdktfVersion)
+    throw Errors.External(
+      "Could not determine cdktf version. Please make sure you are in a directory containing a cdktf project and have all dependencies installed."
+    );
+
+  const manager = new DependencyManager(
+    language,
+    cdktfVersion,
+    config.projectDirectory
+  );
+
+  const allProviders = await manager.allProviders();
+
+  if (argv.json) {
+    console.log(JSON.stringify(allProviders));
+    return;
+  }
+  const data = [];
+  for (const provider of allProviders.local) {
+    data.push({
+      "Provider Name": provider.providerName || "",
+      "Provider Version": provider.providerVersion || "",
+      CDKTF: "",
+      Constraint: provider.providerConstraint || "",
+      "Package Name": "",
+      "Package Version": "",
+    });
+  }
+  for (const provider of allProviders.prebuilt) {
+    data.push({
+      "Provider Name": provider.providerName || "",
+      "Provider Version": provider.providerVersion || "",
+      CDKTF: provider.cdktfVersion || "",
+      Constraint: "",
+      "Package Name": provider.packageName || "",
+      "Package Version": provider.packageVersion || "",
+    });
+  }
+  renderInk(React.createElement(ProviderListTable, { data }));
 }

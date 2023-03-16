@@ -129,31 +129,6 @@ export async function extractReferencesFromExpression(
   }, [] as Reference[]);
 }
 
-function getResourceNamespace(
-  provider: string,
-  resource: string,
-  isDataSource: boolean
-) {
-  // happens e.g. for references to cdktf.TerraformStack (and similar) in generated code
-  if (provider === "cdktf") {
-    return undefined;
-  }
-
-  // e.g. awsProvider -> provider
-  if (
-    resource === pascalCase(`${provider}_provider`) ||
-    (provider === "NullProvider" && resource === "NullProvider")
-  ) {
-    return "provider";
-  }
-
-  if (isDataSource) {
-    return camelCase(`data_${provider}_${resource}`);
-  }
-
-  return camelCase(resource);
-}
-
 export function referenceToVariableName(scope: Scope, ref: Reference): string {
   const parts = ref.referencee.id.split(".");
   const resource = parts[0] === "data" ? `${parts[0]}.${parts[1]}` : parts[0];
@@ -196,7 +171,10 @@ export function variableName(
     )
   );
 
-  scope.variables[name] = { variableName, resource };
+  scope.variables[name] = {
+    variableName,
+    resource,
+  };
   return variableName;
 }
 
@@ -236,6 +214,43 @@ export function constructAst(
       // If we can not find the class name for a resource the caller needs to find a sensible default
       return null;
     }
+  }
+
+  function getResourceNamespace(
+    provider: string,
+    resource: string,
+    isDataSource: boolean
+  ) {
+    // happens e.g. for references to cdktf.TerraformStack (and similar) in generated code
+    if (provider === "cdktf") {
+      return undefined;
+    }
+
+    // e.g. awsProvider -> provider
+    if (
+      resource === pascalCase(`${provider}_provider`) ||
+      (provider === "NullProvider" && resource === "NullProvider")
+    ) {
+      return "provider";
+    }
+
+    const fullProviderName = getFullProviderName(
+      scope.providerSchema,
+      provider
+    );
+    if (fullProviderName && scope.providerGenerator[fullProviderName]) {
+      return camelCase(
+        scope.providerGenerator[fullProviderName]?.getNamespaceNameForResource(
+          type.replace(/\./g, "_")
+        )
+      );
+    }
+
+    if (isDataSource) {
+      return camelCase(`data_${provider}_${resource}`);
+    }
+
+    return camelCase(resource);
   }
 
   // resources or data sources
@@ -470,25 +485,4 @@ export async function findUsedReferences(
       )
     )
   ).flat();
-}
-
-// This only guesses if the type of an expression is list, it should be replaced by something that understands
-// the type of the expression, solved by https://github.com/hashicorp/terraform-cdk/issues/842
-export function isListExpression(item: string) {
-  const hasListExtension =
-    item.includes("[") &&
-    item.includes("for ") &&
-    item.includes(" in ") &&
-    item.includes("]");
-
-  if (!hasListExtension) {
-    return false;
-  }
-
-  // We might have wrapped it in a function that collapses the list
-  return !["element", "index", "length", "lookup", "one", "join"].some(
-    (collapsingTfFunction) =>
-      item.includes(`${collapsingTfFunction}(`) &&
-      item.indexOf(`${collapsingTfFunction}(`) < item.indexOf("for")
-  );
 }

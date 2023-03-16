@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 package com.mycompany.app.resources;
 
 // DOCS_BLOCK_START:resources-escape-hatch
@@ -59,7 +64,7 @@ public class MainResources extends TerraformStack {
                 new Deployment(this, "nginx-deployment", DeploymentConfig.builder()
                                 .metadata(DeploymentMetadata.builder()
                                                 .name("nginx")
-                                                .namespace(exampleNamespace.getMetadata().getName())
+                                                .namespace(exampleNamespace.getMetadata().getName()) // Reference the name property
                                                 .labels(new HashMap<String, String>() {
                                                         {
                                                                 put("app", app.toString());
@@ -147,10 +152,10 @@ public class MainResources extends TerraformStack {
                                 put("for_each", ports.getListValue());
                                 put("content", new HashMap<String, Object>() {
                                         {
-                                                put("fromPort", "${ingress.value}");
-                                                put("toPort", "${ingress.value}");
-                                                put("cidrBlocks", Arrays.asList("0.0.0.0/0"));
-                                                put("protocal", "-1");
+                                                put("from_port", "${ingress.value}");
+                                                put("to_port", "${ingress.value}");
+                                                put("cidr_blocks", Arrays.asList("0.0.0.0/0"));
+                                                put("protocol", "-1");
                                         }
                                 });
                         }

@@ -9,20 +9,21 @@ description: >-
 
 The CDK for Terraform CLI has the following commands:
 
-- [completion](/cdktf/cli-reference/commands#completion)
-- [convert](/cdktf/cli-reference/commands#convert)
-- [debug](/cdktf/cli-reference/commands#debug)
-- [deploy](/cdktf/cli-reference/commands#deploy)
-- [destroy](/cdktf/cli-reference/commands#destroy)
-- [diff](/cdktf/cli-reference/commands#diff)
-- [get](/cdktf/cli-reference/commands#get)
-- [init](/cdktf/cli-reference/commands#init)
-- [login](/cdktf/cli-reference/commands#login)
-- [output](/cdktf/cli-reference/commands#output)
-- [provider add](/cdktf/cli-reference/commands#provider-add)
-- [provider upgrade](/cdktf/cli-reference/commands#provider-upgrade)
-- [synth](/cdktf/cli-reference/commands#synth)
-- [watch](/cdktf/cli-reference/commands#watch)
+- [completion](/terraform/cdktf/cli-reference/commands#completion)
+- [convert](/terraform/cdktf/cli-reference/commands#convert)
+- [debug](/terraform/cdktf/cli-reference/commands#debug)
+- [deploy](/terraform/cdktf/cli-reference/commands#deploy)
+- [destroy](/terraform/cdktf/cli-reference/commands#destroy)
+- [diff](/terraform/cdktf/cli-reference/commands#diff)
+- [get](/terraform/cdktf/cli-reference/commands#get)
+- [init](/terraform/cdktf/cli-reference/commands#init)
+- [login](/terraform/cdktf/cli-reference/commands#login)
+- [output](/terraform/cdktf/cli-reference/commands#output)
+- [provider add](/terraform/cdktf/cli-reference/commands#provider-add)
+- [provider upgrade](/terraform/cdktf/cli-reference/commands#provider-upgrade)
+- [provider list](/terraform/cdktf/cli-reference/commands#provider-list)
+- [synth](/terraform/cdktf/cli-reference/commands#synth)
+- [watch](/terraform/cdktf/cli-reference/commands#watch)
 
 ## completion
 
@@ -82,28 +83,32 @@ watch       -- [experimental] Watch for file changes and automatically trigger a
 
 This command converts Terraform configuration written in HCL to the equivalent configuration in your preferred language.
 
-->**Note**: The `convert` command is only functional for Terraform 1.0 and above. There are also [known limitations](https://cdk.tf/convert-limitations).
+->**Note**: The `convert` command has [known limitations](https://cdk.tf/convert-limitations).
 
 ```
-cdktf convert [OPTIONS]
+cdktf convert
 
 Converts a single file of HCL configuration to CDK for Terraform. Takes the file to be converted on stdin.
 
 Options:
-      --version                   Show version number                                                                                                                                                              [boolean]
-      --disable-plugin-cache-env  Dont set TF_PLUGIN_CACHE_DIR automatically. This is useful when the plugin cache is configured differently. Supported using the env CDKTF_DISABLE_PLUGIN_CACHE_ENV.
-                                                                                                                                                                                                  [boolean] [default: false]
-      --log-level                 Which log level should be written. Only supported via setting the env CDKTF_LOG_LEVEL                                                                                             [string]
-      --language                                                                                                                                 [choices: "typescript", "python", "csharp", "java"] [default: "typescript"]
-      --provider                  The conversion needs to know which providers are used in addition to the ones in your cdktf.json file. We search for a cdktf.json below your current working directory.
-                                                                                                                                                                                                       [array] [default: []]
-  -h, --help                      Show help                                                                                                                                                                        [boolean]
+      --version                   Show version number                                                                                                    [boolean]
+      --disable-plugin-cache-env  Dont set TF_PLUGIN_CACHE_DIR automatically. This is useful when the plugin cache is configured differently. Supported using the
+                                  env CDKTF_DISABLE_PLUGIN_CACHE_ENV.                                                                   [boolean] [default: false]
+      --log-level                 Which log level should be written. Only supported via setting the env CDKTF_LOG_LEVEL                                   [string]
+      --language                                                                       [choices: "typescript", "python", "csharp", "java"] [default: "typescript"]
+      --provider                  The conversion needs to know which providers are used in addition to the ones in your cdktf.json file. We search for a
+                                  cdktf.json below your current working directory.                                                           [array] [default: []]
+      --stack                     Wrap the generated code within a stack class                                                          [boolean] [default: false]
+  -h, --help                      Show help                                                                                                              [boolean]
 
 Examples:
-  cat main.tf | cdktf convert  --provider integrations/github                                                     Takes the HCL content of main.tf and converts it to CDK for Terraform content and prints it
-  cat main.tf | cdktf convert --provider hashicorp/aws > imported.ts                                              Takes the HCL content of main.tf and converts it to CDK for Terraform content in imported.ts
-  cat main.tf | cdktf convert --provider 'hashicorp/aws@ ~>3.62.0' 'integrations/github@ ~>4.16.0' --language     Takes the HCL content of main.tf and converts it to CDK for Terraform content in imported.ts
-  python > imported.py
+  cat main.tf | cdktf convert  --provider integrations/github                        Takes the HCL content of main.tf and converts it to CDK for Terraform content
+                                                                                     and prints it
+  cat main.tf | cdktf convert --provider hashicorp/aws > imported.ts                 Takes the HCL content of main.tf and converts it to CDK for Terraform content
+                                                                                     in imported.ts
+  cat main.tf | cdktf convert --provider 'hashicorp/aws@ ~>3.62.0'                   Takes the HCL content of main.tf and converts it to CDK for Terraform content
+  'integrations/github@ ~>4.16.0' --language python > imported.py                    in imported.ts
+
 ```
 
 **Examples**
@@ -112,6 +117,12 @@ Convert a local file.
 
 ```bash
 cat main.tf | cdktf convert > imported.ts
+```
+
+Convert a local file and wrap it into a `cdktf.TerraformStack` instead of a `cdktf.Construct`.
+
+```bash
+cat main.tf | cdktf convert --stack > imported.ts
 ```
 
 Convert HCL in your clipboard to Python on OSX.
@@ -142,7 +153,7 @@ Options:
       --version                                 Show version number  [boolean]
       --disable-plugin-cache-env                Dont set TF_PLUGIN_CACHE_DIR automatically. This is useful when the plugin cache is configured differently. Supported using the env CDKTF_DISABLE_PLUGIN_CACHE_ENV.  [boolean] [default: false]
       --log-level                               Which log level should be written. Only supported via setting the env CDKTF_LOG_LEVEL  [string]
-  -a, --app                                     Command to use in order to execute cdktf app  [required]
+  -a, --app                                     Command to use in order to execute cdktf app  [required] [default: "npx ts-node main.ts"]
   -o, --output                                  Output directory for the synthesized Terraform config  [required] [default: "cdktf.out"]
       --auto-approve                            Auto approve  [boolean] [default: false]
       --outputs-file                            Path to file where stack outputs will be written as JSON  [string]
@@ -151,10 +162,14 @@ Options:
       --parallelism                             Number of concurrent CDKTF stacks to run. Defaults to infinity, denoted by -1  [number] [default: -1]
       --refresh-only                            Select the "refresh only" planning mode, which checks whether remote objects still match the outcome of the most recent Terraform apply but does not propose any actions to undo any changes made outside of Terraform.  [boolean] [default: false]
       --terraform-parallelism                   Forwards value as the `-parallelism` flag to Terraform. By default, the this flag is not forwarded to Terraform. Note: This flag is not supported by remote / cloud backend  [number] [default: -1]
+      --no-color                                Disables terminal formatting sequences in the output.  [boolean] [default: false]
+      --migrate-state                           Pass this flag after switching state backends to approve a state migration for all targeted stacks  [boolean] [default: false]
+      --var                                     Set a value for one of the input variables in the stack or stacks to apply. Use this option more than once to set more than one variable.  [array] [default: []]
+      --var-file                                Load variable values from the given file, in addition to the default files terraform.tfvars and *.auto.tfvars. Use this option more than once to include more than one variables file.  [array] [default: []]
   -h, --help                                    Show help  [boolean]
 ```
 
-~> **Note:** The `parallelism` flag has a different behavior than the [terraform parallelism flag](/cli/commands/apply#parallelism-n). To set the custom terraform parallelism flag, please use the `--terraform-parallelism` flag instead.
+~> **Note:** The `parallelism` flag has a different behavior than the [terraform parallelism flag](/terraform/cli/commands/apply#parallelism-n). To set the custom terraform parallelism flag, please use the `--terraform-parallelism` flag instead.
 
 **Examples**
 
@@ -190,7 +205,7 @@ $ cdktf deploy '*-production'
 
 If the stacks have dependencies (through cross stack references or by calling `myStack.addDependency(otherStack)`) deploy will figure out the right order to run.
 
-For more info on the `--outputs-file` option, refer to the [`output` command](/cdktf/cli-reference/commands#output).
+For more info on the `--outputs-file` option, refer to the [`output` command](/terraform/cdktf/cli-reference/commands#output).
 
 ## destroy
 
@@ -214,16 +229,20 @@ Options:
       --version                            Show version number  [boolean]
       --disable-plugin-cache-env           Dont set TF_PLUGIN_CACHE_DIR automatically. This is useful when the plugin cache is configured differently. Supported using the env CDKTF_DISABLE_PLUGIN_CACHE_ENV.  [boolean] [default: false]
       --log-level                          Which log level should be written. Only supported via setting the env CDKTF_LOG_LEVEL  [string]
-  -a, --app                                Command to use in order to execute cdktf app  [required]
+  -a, --app                                Command to use in order to execute cdktf app  [required] [default: "npx ts-node main.ts"]
   -o, --output                             Output directory for the synthesized Terraform config  [required] [default: "cdktf.out"]
       --auto-approve                       Auto approve  [boolean] [default: false]
       --ignore-missing-stack-dependencies  Don't check if all stacks specified in the command have their dependencies included as well  [boolean] [default: false]
       --parallelism                        Number of concurrent CDKTF stacks to run. Defaults to infinity, denoted by -1  [number] [default: -1]
       --terraform-parallelism              Forwards value as the `-parallelism` flag to Terraform. By default, the this flag is not forwarded to Terraform. Note: This flag is not supported by remote / cloud backend  [number] [default: -1]
+      --var                                Set a value for one of the input variables in the stack or stacks to apply. Use this option more than once to set more than one variable.  [array] [default: []]
+      --var-file                           Load variable values from the given file, in addition to the default files terraform.tfvars and *.auto.tfvars. Use this option more than once to include more than one variables file.  [array] [default: []]
+      --no-color                           Disables terminal formatting sequences in the output.  [boolean] [default: false]
+      --migrate-state                      Pass this flag after switching state backends to approve a state migration for all targeted stacks  [boolean] [default: false]
   -h, --help                               Show help  [boolean]
 ```
 
-~> **Note:** The `parallelism` flag has a different behavior than the [terraform parallelism flag](/cli/commands/apply#parallelism-n). To set the custom terraform parallelism flag, please use the `--terraform-parallelism` flag instead.
+~> **Note:** The `parallelism` flag has a different behavior than the [terraform parallelism flag](/terraform/cli/commands/apply#parallelism-n). To set the custom terraform parallelism flag, please use the `--terraform-parallelism` flag instead.
 
 **Examples**
 
@@ -281,14 +300,18 @@ Options:
       --version                   Show version number  [boolean]
       --disable-plugin-cache-env  Dont set TF_PLUGIN_CACHE_DIR automatically. This is useful when the plugin cache is configured differently. Supported using the env CDKTF_DISABLE_PLUGIN_CACHE_ENV.  [boolean] [default: false]
       --log-level                 Which log level should be written. Only supported via setting the env CDKTF_LOG_LEVEL  [string]
-  -a, --app                       Command to use in order to execute cdktf app  [required]
+  -a, --app                       Command to use in order to execute cdktf app  [required] [default: "npx ts-node main.ts"]
   -o, --output                    Output directory for the synthesized Terraform config  [required] [default: "cdktf.out"]
       --refresh-only              Select the "refresh only" planning mode, which checks whether remote objects still match the outcome of the most recent Terraform apply but does not propose any actions to undo any changes made outside of Terraform.  [boolean] [default: false]
       --terraform-parallelism     Forwards value as the `-parallelism` flag to Terraform. By default, the this flag is not forwarded to Terraform. Note: This flag is not supported by remote / cloud backend  [number] [default: -1]
+      --var                       Set a value for one of the input variables in the stack. Use this option more than once to set more than one variable.  [array] [default: []]
+      --var-file                  Load variable values from the given file, in addition to the default files terraform.tfvars and *.auto.tfvars. Use this option more than once to include more than one variables file.  [array] [default: []]
+      --no-color                  Disables terminal formatting sequences in the output.  [boolean] [default: false]
+      --migrate-state             Pass this flag after switching state backends to approve a state migration for the targeted stack  [boolean] [default: false]
   -h, --help                      Show help  [boolean]
 ```
 
-~> **Note:** The `parallelism` flag has a different behavior than the [terraform parallelism flag](/cli/commands/plan#parallelism-n). To set the custom terraform parallelism flag, please use the `--terraform-parallelism` flag instead.
+~> **Note:** The `parallelism` flag has a different behavior than the [terraform parallelism flag](/terraform/cli/commands/plan#parallelism-n). To set the custom terraform parallelism flag, please use the `--terraform-parallelism` flag instead.
 
 Examples:
 
@@ -370,20 +393,23 @@ cdktf init [OPTIONS]
 Create a new cdktf project from a template.
 
 Options:
-      --version                   Show version number                                                                                                                  [boolean]
+      --version                   Show version number                                                                                                                               [boolean]
       --disable-plugin-cache-env  Dont set TF_PLUGIN_CACHE_DIR automatically. This is useful when the plugin cache is configured differently. Supported using the env
-                                  CDKTF_DISABLE_PLUGIN_CACHE_ENV.                                                                                     [boolean] [default: false]
-      --log-level                 Which log level should be written. Only supported via setting the env CDKTF_LOG_LEVEL                                                 [string]
-      --template                  The template to be used to create a new project. Either URL to zip file or one of the built-in templates: ["csharp", "go", "java", "python",
-                                  "python-pip", "typescript"]                                                                                                           [string]
-      --project-name              The name of the project.                                                                                                              [string]
-      --project-description       The description of the project.                                                                                                       [string]
-      --dist                      Install dependencies from a "dist" directory (for development)                                                                        [string]
-      --local                     Use local state storage for generated Terraform.                                                                    [boolean] [default: false]
-      --cdktf-version             The cdktf version to use while creating a new project.                                                             [string] [default: "0.0.0"]
-      --from-terraform-project    Use a terraform project as the basis, CDK constructs will be generated based on the .tf files in the path                             [string]
-      --enable-crash-reporting    Enable crash reporting for the CLI, refer to https://cdk.tf/crash-reporting for more details                    [boolean]
-  -h, --help                      Show help                                                                                                                            [boolean]
+                                  CDKTF_DISABLE_PLUGIN_CACHE_ENV.                                                                                                  [boolean] [default: false]
+      --log-level                 Which log level should be written. Only supported via setting the env CDKTF_LOG_LEVEL                                                              [string]
+      --template                  The template to be used to create a new project. Either URL to zip file or one of the built-in templates: ["csharp", "go", "java", "python", "python-pip",
+                                  "typescript"]                                                                                                                                      [string]
+      --project-name              The name of the project.                                                                                                                           [string]
+      --project-description       The description of the project.                                                                                                                    [string]
+      --dist                      Install dependencies from a "dist" directory (for development)                                                                                     [string]
+      --local                     Use local state storage for generated Terraform.                                                                                 [boolean] [default: false]
+      --cdktf-version             The cdktf version to use while creating a new project.                                                                          [string] [default: "0.0.0"]
+      --from-terraform-project    Use a terraform project as the basis, CDK constructs will be generated based on the .tf files in the path                                          [string]
+      --enable-crash-reporting    Enable crash reporting for the CLI, refer to https://cdk.tf/crash-reporting for more details                                                      [boolean]
+      --providers                 Providers to add to your project                                                                                                      [array] [default: []]
+      --providers-force-local     Force local installation of provider specified in init                                                                                            [boolean]
+      --tfe-hostname              The hostname of the Terraform Enterprise instance to use for remote state storage                                                                  [string]
+  -h, --help                      Show help                                                                                                                                         [boolean]
 ```
 
 **Examples**
@@ -522,7 +548,7 @@ Options:
   -h, --help                      Show help  [boolean]
 ```
 
-~> **Note:** The `parallelism` flag has a different behavior than the [terraform parallelism flag](/cli/commands/apply#parallelism-n). To set the custom terraform parallelism flag, please use the `--terraform-parallelism` flag instead.
+~> **Note:** The `parallelism` flag has a different behavior than the [terraform parallelism flag](/terraform/cli/commands/apply#parallelism-n). To set the custom terraform parallelism flag, please use the `--terraform-parallelism` flag instead.
 
 **Examples**
 
@@ -632,7 +658,7 @@ maven: Apache Maven 3.8.2 (ea98e05a04480131370aa0c110b8c54cf726c06f)Maven home: 
 
 ## provider add
 
-This command facilitates adding Terraform providers to a CDKTF project. If a [pre-built provider](/cdktf/concepts/providers#install-pre-built-providers) is available for the CDKTF version you are using and the Terraform provider version you requested (if any), it will be installed using e.g. `npm install` or `dotnet add` depending on the language you are using. Otherwise, the provider will be added to the `cdktf.json` config and `cdktf get` will be automatically invoked to generate [local provider bindings](/cdktf/concepts/providers#add-provider-to-cdktf-json).
+This command facilitates adding Terraform providers to a CDKTF project. If a [pre-built provider](/terraform/cdktf/concepts/providers#install-pre-built-providers) is available for the CDKTF version you are using and the Terraform provider version you requested (if any), it will be installed using e.g. `npm install` or `dotnet add` depending on the language you are using. Otherwise, the provider will be added to the `cdktf.json` config and `cdktf get` will be automatically invoked to generate [local provider bindings](/terraform/cdktf/concepts/providers#add-provider-to-cdktf-json).
 
 ```sh
 $ cdktf provider add --help
@@ -665,7 +691,7 @@ Add the `aws` provider to the project. As the namespace of the AWS Terraform pro
 $ cdktf provider add aws
 ```
 
-Add a specific version of the `aws` provider to the project. You can use the `@` symbol to specify a [version constraint](/language/providers/requirements#version-constraints).
+Add a specific version of the `aws` provider to the project. You can use the `@` symbol to specify a [version constraint](/terraform/language/providers/requirements#version-constraints).
 
 ```bash
 $ cdktf provider add aws@~>4.0
@@ -687,10 +713,31 @@ $ cdktf provider add registry.example.com/acme/my-provider
 
 This command lets you upgrade Terraform providers in a CDKTF project to the newest version compatible with your `cdktf` version. You can also optionally add a version constraint.
 
-If your project has the associated [pre-built provider](/cdktf/concepts/providers#install-pre-built-providers) already installed, CDKTF updates the pre-built provider. Otherwise, CDKTF adds the provider to the `cdktf.json` configuration file and invokes `cdktf get` to generate [local provider bindings](/cdktf/concepts/providers#add-provider-to-cdktf-json).
+If your project has the associated [pre-built provider](/terraform/cdktf/concepts/providers#install-pre-built-providers) already installed, CDKTF updates the pre-built provider. Otherwise, CDKTF adds the provider to the `cdktf.json` configuration file and invokes `cdktf get` to generate [local provider bindings](/terraform/cdktf/concepts/providers#add-provider-to-cdktf-json).
 
 ```sh
-$ cdktf provider add --help
+$ cdktf provider upgrade --help
+```
+
+## provider list
+
+This command prints out a table (or json with the `--json` option) containing details about the providers installed for the project. It gathers information for both locally built and pre-built providers.
+
+Information printed varies between locally generated and prebuilt providers. The information for each provider includes the Terraform provider version, the CDKTF version, and the package name and version (if pre-built provider).
+
+```sh
+$ cdktf provider list --help
+cdktf provider list [flags]
+
+List installed providers
+
+Options:
+      --version                   Show version number                                                                                  [boolean]
+      --disable-plugin-cache-env  Dont set TF_PLUGIN_CACHE_DIR automatically. This is useful when the plugin cache is configured differently.
+                                  Supported using the env CDKTF_DISABLE_PLUGIN_CACHE_ENV.                             [boolean] [default: false]
+      --log-level                 Which log level should be written. Only supported via setting the env CDKTF_LOG_LEVEL                 [string]
+      --json                      get providers list as json                                                          [boolean] [default: false]
+  -h, --help                      Show help                                                                                            [boolean]
 ```
 
 **Help Output**
