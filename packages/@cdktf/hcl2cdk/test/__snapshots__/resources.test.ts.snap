@@ -21,10 +21,12 @@ class MyConvertedCode extends cdktf.TerraformStack {
         }
       );
     new aws.ebsVolume.EbsVolume(this, "changeme_ebs_volume_snapshot", {
-      availabilityZone:
-        "\${" +
-        dataAwsAvailabilityZonesChangemeAzListEbsSnapshot.fqn +
-        "}.names[0]",
+      availabilityZone: cdktf.Token.asString(
+        cdktf.propertyAccess(
+          dataAwsAvailabilityZonesChangemeAzListEbsSnapshot.names,
+          ["0"]
+        )
+      ),
       encrypted: false,
       size: 10,
       tags: {
@@ -238,7 +240,7 @@ class MyConvertedCode extends cdktf.TerraformStack {
               value: "Hello from the client!",
             },
           ],
-          essential: "true",
+          essential: true,
           image: "crccheck/hello-world",
           name: "client",
           portMappings: [
@@ -250,9 +252,9 @@ class MyConvertedCode extends cdktf.TerraformStack {
           ],
         },
       ]),
-      cpu: 256,
+      cpu: cdktf.Token.asString(256),
       family: "client",
-      memory: 512,
+      memory: cdktf.Token.asString(512),
       networkMode: "awsvpc",
       requiresCompatibilities: ["FARGATE"],
     });
@@ -522,8 +524,8 @@ class MyConvertedCode extends cdktf.TerraformStack {
       ami: cdktf.Fn.join(
         "-",
         cdktf.Token.asList([
-          "\${" + tags.value + "}.app",
-          "\${" + tags.value + "}.env",
+          cdktf.propertyAccess(tags.value, ["app"]),
+          cdktf.propertyAccess(tags.value, ["env"]),
         ])
       ),
       associatePublicIpAddress: true,
