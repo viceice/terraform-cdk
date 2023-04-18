@@ -32,6 +32,8 @@ jobs:
       - name: "Add Git safe.directory" # Go 1.18+ started embedding repo info in the build and e.g. building @cdktf/hcl2json fails without this
         # The Sentry CLI also requires this, https://github.com/actions/checkout/issues/760
         run: git config --global --add safe.directory /__w/terraform-cdk/terraform-cdk
+      - name: ensure correct user
+        run: chown -R root /__w/terraform-cdk
       - name: version
         id: get_version
         run: |
@@ -182,6 +184,8 @@ jobs:
         with:
           name: dist
           path: dist
+      - name: ensure correct user
+        run: chown -R root /__w/terraform-cdk
       - name: Release
         run: npx -p jsii-release jsii-release-npm
         env:
@@ -204,6 +208,8 @@ jobs:
         with:
           name: dist
           path: dist
+      - name: ensure correct user
+        run: chown -R root /__w/terraform-cdk
       - name: Release
         run: npx -p jsii-release jsii-release-pypi
         env:
@@ -227,6 +233,8 @@ jobs:
         with:
           name: dist
           path: dist
+      - name: ensure correct user
+        run: chown -R root /__w/terraform-cdk
       - name: Release
         run: npx -p jsii-release jsii-release-maven
         env:
@@ -254,6 +262,8 @@ jobs:
         with:
           name: dist
           path: dist
+      - name: ensure correct user
+        run: chown -R root /__w/terraform-cdk
       - name: Release
         run: npx -p jsii-release jsii-release-nuget
         env:
@@ -276,6 +286,8 @@ jobs:
         with:
           name: dist
           path: dist
+      - name: ensure correct user
+        run: chown -R root /__w/terraform-cdk
       - name: Release
         run: npx -p jsii-release jsii-release-golang
         env:

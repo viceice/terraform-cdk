@@ -1,6 +1,5 @@
 // Copyright (c) HashiCorp, Inc
 // SPDX-License-Identifier: MPL-2.0
-import { AbortController, AbortSignal } from "node-abort-controller"; // polyfill until we update to node 16
 import { Errors, ensureAllSettledBeforeThrowing, logger } from "@cdktf/commons";
 import { SynthesizedStack, SynthOrigin, SynthStack } from "./synth-stack";
 import { printAnnotations } from "./synth";
@@ -339,7 +338,7 @@ export class CdktfProject {
       type: "synthesizing",
     });
     const stacks = await SynthStack.synth(
-      this.abortSignal,
+      this.abortSignal as any,
       this.synthCommand,
       this.outDir,
       this.workingDirectory,

@@ -6,7 +6,7 @@ import {
 } from "@cdktf/provider-generator";
 
 export type TerraformResourceBlock = unknown;
-export type Scope = {
+export type ProgramScope = {
   providerSchema: ProviderSchema;
   providerGenerator: Record<string, TerraformProviderGenerator>;
   constructs: Set<string>;
@@ -19,4 +19,12 @@ export type Scope = {
   >;
   // Temporary flag to indicate if we need to import the cdktf library to access the token class
   hasTokenBasedTypeCoercion: boolean;
+  nodeIds: string[]; // temporarily added until replaced
+};
+
+export type ResourceScope = ProgramScope & {
+  forEachIteratorName?: string; // set if a for_each is used in this resource
+  countIteratorName?: string; // set if a count is used in this resource
+  withinOverrideExpression?: boolean; // set if we are currently within an override expression
+  scopedVariables?: Record<string, string>; // set if we are currently within an dynamic block expression
 };

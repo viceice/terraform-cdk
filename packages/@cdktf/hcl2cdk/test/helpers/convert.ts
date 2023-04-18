@@ -25,7 +25,9 @@ type SchemaPromise = ReturnType<typeof readSchema>;
 export enum Synth {
   yes_all_languages, // Synth and snapshot all languages
   yes,
+  no_cant_resolve_construct,
   no_missing_map_access, // See https://github.com/hashicorp/terraform-cdk/issues/2670
+  no_missing_type_coercion, // We don't type coerce numbers yet
   never, // Some examples are built so that they will never synth but test a specific generation edge case
 }
 
@@ -100,6 +102,11 @@ export const binding = {
     fqn: "scaleway/scaleway@ ~>2.10.0",
     type: ProviderType.provider,
     path: "providers/scaleway",
+  },
+  external: {
+    fqn: "hashicorp/external@=2.3.1",
+    type: ProviderType.provider,
+    path: "providers/external",
   },
   awsVpc: {
     fqn: "terraform-aws-modules/vpc/aws@=3.19.0",
