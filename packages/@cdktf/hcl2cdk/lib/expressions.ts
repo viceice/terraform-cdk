@@ -7,7 +7,10 @@ import { camelCase, logger, pascalCase } from "./utils";
 import { TerraformResourceBlock, ProgramScope, ResourceScope } from "./types";
 import { getReferencesInExpression, getExpressionAst } from "@cdktf/hcl2json";
 import { getFullProviderName } from "./provider";
-import { TFExpressionSyntaxTree as tex } from "@cdktf/hcl2json";
+import {
+  TFExpressionSyntaxTree as tex,
+  wrapTerraformExpression,
+} from "@cdktf/hcl2json";
 import { functionsMap, tsFunctionsMap } from "./function-bindings/functions";
 import { coerceType } from "./coerceType";
 import {
@@ -26,35 +29,6 @@ export type Reference = {
 };
 
 const leaveCommentText = `Please leave a comment at https://cdk.tf/bugs/convert-expressions if you run into this issue.`;
-
-function wrapTerraformExpression(input: string): string {
-  if (!isNaN(parseInt(input, 10))) {
-    return input;
-  }
-  if (input === "true" || input === "false") {
-    return input;
-  }
-  if (
-    input.startsWith("[") ||
-    input.startsWith("{") ||
-    input.startsWith(`"`) ||
-    input.startsWith("'")
-  ) {
-    return input;
-  }
-
-  if (input.startsWith("<<")) {
-    // For Heredocs, we need to ensure that the string ends with an empty newline as
-    // the HCL parser doesn't find the ending token otherwise
-    if (!input.endsWith("\n")) {
-      return input + "\n";
-    }
-
-    return input;
-  }
-
-  return `"${input}"`;
-}
 
 const tfBinaryOperatorsToCdktf = {
   logicalOr: "or",
@@ -142,7 +116,7 @@ function traversalToVariableName(
   if (!tex.isScopeTraversalExpression(node)) {
     logger.error(
       `Unexpected expression type ${node.type} with value ${node.meta.value} passed to convert to a variable. 
-        Please leave a comment at https://cdk.tf/bugs/convert-expressions if you run into this issue`
+        ${leaveCommentText}`
     );
     return "";
   }
@@ -449,6 +423,14 @@ async function convertTFExpressionAstToTs(
       }))
     );
 
+    const lastPart = parts[parts.length - 1];
+    if (t.isStringLiteral(lastPart.expr) && lastPart.expr.value === "\n") {
+      // This is a bit of a hack, but the trailing newline we add due to
+      // heredocs looks ugly and unnecessary in the generated code, so we
+      // try to remove it
+      parts.pop();
+    }
+
     if (parts.length === 0) {
       return t.stringLiteral(node.meta.value);
     }
@@ -574,6 +556,31 @@ async function convertTFExpressionAstToTs(
           mapping.parameters[index].type
         )
       )
+    );
+  }
+
+  if (tex.isIndexExpression(node)) {
+    const collectionExpressionChild = tex.getChildWithValue(
+      node,
+      node.meta.collectionExpression
+    );
+    const keyExpressionChild = tex.getChildWithValue(
+      node,
+      node.meta.keyExpression
+    );
+
+    const collectionExpression = await convertTFExpressionAstToTs(
+      collectionExpressionChild!,
+      scope
+    );
+    const keyExpression = await convertTFExpressionAstToTs(
+      keyExpressionChild!,
+      scope
+    );
+
+    return t.callExpression(
+      t.memberExpression(t.identifier("cdktf"), t.identifier("propertyAccess")),
+      [collectionExpression, t.arrayExpression([keyExpression])]
     );
   }
 
@@ -848,17 +855,17 @@ export function findExpressionType(
 export async function expressionAst(
   input: string
 ): Promise<tex.ExpressionType> {
-  const sanitizedInput = wrapTerraformExpression(input);
-  const isWrapped = sanitizedInput.length !== input.length;
-  const ast = await getExpressionAst("main.tf", sanitizedInput);
+  const { wrap, wrapOffset } = wrapTerraformExpression(input);
+  const ast = await getExpressionAst("main.tf", wrap);
 
   if (!ast) {
     throw new Error(`Unable to parse terraform expression: ${input}`);
   }
 
-  if (isWrapped) {
+  if (wrapOffset != 0 && tex.isTemplateWrapExpression(ast)) {
     return ast.children[0];
   }
+
   return ast;
 }
 
