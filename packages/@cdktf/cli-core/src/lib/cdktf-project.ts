@@ -1,6 +1,12 @@
 // Copyright (c) HashiCorp, Inc
 // SPDX-License-Identifier: MPL-2.0
-import { Errors, ensureAllSettledBeforeThrowing, logger } from "@cdktf/commons";
+import {
+  Errors,
+  ensureAllSettledBeforeThrowing,
+  logger,
+  readConfigSync,
+  sendTelemetry,
+} from "@cdktf/commons";
 import { SynthesizedStack, SynthOrigin, SynthStack } from "./synth-stack";
 import { printAnnotations } from "./synth";
 import {
@@ -374,6 +380,17 @@ export class CdktfProject {
         `Stack failed to plan: ${stack.stack.name}. Please check the logs for more information.`
       );
     }
+
+    await this.projectTelemetry("diff", {
+      stackMetadata: stacks.map(
+        (stack) => JSON.parse(stack.content)["//"].metadata
+      ),
+      errors: stack.error,
+      requiredProviders: stacks.map(
+        (stack: any) =>
+          JSON.parse(stack.content)["terraform"].required_providers
+      ),
+    });
   }
 
   private async execute(
@@ -422,7 +439,6 @@ export class CdktfProject {
         throw e;
       }
     }
-
     // We end the loop when all stacks are started, now we need to wait for them to be done
     // We wait for all work to finish even if one of the promises threw an error.
     await ensureAllSettledBeforeThrowing(
@@ -467,6 +483,17 @@ export class CdktfProject {
           .join(", ")}. Please check the logs for more information.`
       );
     }
+
+    await this.projectTelemetry("destroy", {
+      stackMetadata: stacksToRun.map(
+        (stack) => JSON.parse(stack.content)["//"].metadata
+      ),
+      failedStacks: unprocessedStacks.map((stack) => stack.error),
+      requiredProviders: stacksToRun.map(
+        (stack: any) =>
+          JSON.parse(stack.content)["terraform"].required_providers
+      ),
+    });
   }
 
   public async destroy(opts: MutationOptions = {}) {
@@ -524,6 +551,25 @@ export class CdktfProject {
           .join(", ")}. Please check the logs for more information.`
       );
     }
+
+    await this.projectTelemetry("destroy", {
+      stackMetadata: stacksToRun.map(
+        (stack) => JSON.parse(stack.content)["//"].metadata
+      ),
+      failedStacks: unprocessedStacks.map((stack) => stack.error),
+      requiredProviders: stacksToRun.map(
+        (stack: any) =>
+          JSON.parse(stack.content)["terraform"].required_providers
+      ),
+    });
+  }
+
+  public async projectTelemetry(command: string, payload: any): Promise<void> {
+    const config = readConfigSync();
+    await sendTelemetry(command, {
+      payload,
+      language: config.language,
+    });
   }
 
   public async fetchOutputs(opts: MultipleStackOptions) {
