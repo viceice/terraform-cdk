@@ -484,7 +484,7 @@ export class CdktfProject {
       );
     }
 
-    await this.projectTelemetry("destroy", {
+    await this.projectTelemetry("deploy", {
       stackMetadata: stacksToRun.map(
         (stack) => JSON.parse(stack.content)["//"].metadata
       ),
