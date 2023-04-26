@@ -567,7 +567,7 @@ export class CdktfProject {
   public async projectTelemetry(command: string, payload: any): Promise<void> {
     const config = readConfigSync();
     await sendTelemetry(command, {
-      payload,
+      ...payload,
       language: config.language,
     });
   }
