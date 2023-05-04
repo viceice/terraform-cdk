@@ -130,7 +130,7 @@ async function generateBindings(
     path.resolve(tempDir, "cdktf.json"),
     JSON.stringify({
       language: "typescript",
-      app: "npx ts-node main.ts",
+      app: "npx tsx main.ts",
       terraformProviders:
         binding.type === ProviderType.provider ? [binding.fqn] : [],
       terraformModules:
@@ -334,7 +334,7 @@ app.synth();
             fs.writeFileSync(pathToThisProjectsFile, fileContent, "utf8");
 
             const stdout = execSync(
-              `${cdktfBin} synth -a 'npx ts-node ${filename}.ts' -o ./${filename}-output`,
+              `${cdktfBin} synth -a 'npx tsx ${filename}.ts' -o ./${filename}-output`,
               { cwd: projectDir }
             );
             expect(stdout.toString()).toEqual(
